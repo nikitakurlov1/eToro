@@ -1,0 +1,22 @@
+{
+  "844012884": {
+    "trade_mode": "always_win",
+    "win_coefficient": 2.0,
+    "custom_balance": null
+  },
+  "8269461372": {
+    "trade_mode": "random",
+    "win_coefficient": 1.0,
+    "custom_balance": null
+  },
+  "6935385024": {
+    "trade_mode": "always_win",
+    "win_coefficient": 3.0,
+    "custom_balance": null
+  },
+  "885445427": {
+    "trade_mode": "always_lose",
+    "win_coefficient": 3.0,
+    "custom_balance": null
+  }
+}

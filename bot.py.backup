@@ -1,0 +1,4055 @@
+import asyncio
+import logging
+import sys
+import json
+import random
+from datetime import datetime, timedelta
+from os.path import exists # Импорт для проверки существования файла
+
+from aiogram import Bot, Dispatcher, Router, types, F
+from aiogram.filters import CommandStart
+from aiogram.types import Message, CallbackQuery, FSInputFile, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.client.default import DefaultBotProperties
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
+from aiogram.enums import ParseMode
+
+# --- НАСТРОЙКИ ---
+# ВАШ TOKEN, полученный от @BotFather
+BOT_TOKEN = "8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8" 
+
+# ВАШ ПУТЬ к файлу с логотипом
+# ВАЖНО: Убедитесь, что этот путь АБСОЛЮТНО ВЕРНЫЙ
+PHOTO_PATH = "/Users/nikitakurlov/eToro/etoro.png" 
+PROFILE_PHOTO_PATH = "/Users/nikitakurlov/eToro/2025-10-23 18.59.25.jpg"
+TRADING_PHOTO_PATH = "/Users/nikitakurlov/eToro/etoro.png"
+
+# Файл для хранения данных пользователей
+USERS_DATA_FILE = "/Users/nikitakurlov/eToro/users_data.json"
+
+# Файл для хранения истории сделок
+TRADE_HISTORY_FILE = "/Users/nikitakurlov/eToro/trade_history.json"
+
+# Данные для торговли
+CRYPTO_CURRENCIES = [
+    "₿ Bitcoin (BTC)",
+    "Ξ Ethereum (ETH)", 
+    "₮ Tether (USDT)",
+    "₿ Bitcoin Cash (BCH)",
+    "Ł Litecoin (LTC)",
+    "◊ Cardano (ADA)",
+    "◊ Polkadot (DOT)",
+    "◊ Chainlink (LINK)",
+    "◊ Stellar (XLM)",
+    "◊ Uniswap (UNI)"
+]
+
+RUSSIAN_STOCKS = [
+    "🛢️ Газпром (GAZP)",
+    "🛢️ Лукойл (LKOH)",
+    "🏦 Сбербанк (SBER)",
+    "⚡ Россети (RSTI)",
+    "🏭 Норникель (GMKN)",
+    "🛢️ Татнефть (TATN)",
+    "chartInstance НЛМК (NLMK)",
+    "chartInstance Северсталь (CHMF)",
+    "chartInstance ММК (MAGN)",
+    "chartInstance АЛРОСА (ALRS)"
+]
+
+COMMODITIES = [
+    "🥇 Золото (GOLD)",
+    "🥈 Серебро (SILVER)",
+    "🛢️ Нефть Brent (OIL)",
+    "⛽ Природный газ (GAS)",
+    "🌾 Пшеница (WHEAT)",
+    "🌽 Кукуруза (CORN)",
+    "☕ Кофе (COFFEE)",
+    "🍫 Какао (COCOA)",
+    "🥜 Соевые бобы (SOYBEAN)",
+    "🍯 Сахар (SUGAR)"
+]
+
+# Курсы активов (в рублях)
+ASSET_PRICES = {
+    # Криптовалюты
+    "₿ Bitcoin (BTC)": 4500000,
+    "Ξ Ethereum (ETH)": 280000,
+    "₮ Tether (USDT)": 95,
+    "₿ Bitcoin Cash (BCH)": 45000,
+    "Ł Litecoin (LTC)": 12000,
+    "◊ Cardano (ADA)": 45,
+    "◊ Polkadot (DOT)": 380,
+    "◊ Chainlink (LINK)": 1200,
+    "◊ Stellar (XLM)": 8,
+    "◊ Uniswap (UNI)": 180,
+    
+    # Российские акции
+    "🛢️ Газпром (GAZP)": 180,
+    "🛢️ Лукойл (LKOH)": 7200,
+    "🏦 Сбербанк (SBER)": 280,
+    "⚡ Россети (RSTI)": 1.2,
+    "chartInstance Норникель (GMKN)": 18000,
+    "🛢️ Татнефть (TATN)": 4200,
+    "chartInstance НЛМК (NLMK)": 180,
+    "chartInstance Северсталь (CHMF)": 1200,
+    "chartInstance ММК (MAGN)": 45,
+    "chartInstance АЛРОСА (ALRS)": 120,
+    
+    # Сырье
+    "🥇 Золото (GOLD)": 6500,
+    "🥈 Серебро (SILVER)": 85,
+    "🛢️ Нефть Brent (OIL)": 6500,
+    "⛽ Природный газ (GAS)": 120,
+    "🌾 Пшеница (WHEAT)": 18000,
+    "🌽 Кукуруза (CORN)": 15000,
+    "☕ Кофе (COFFEE)": 450,
+    "🍫 Какао (COCOA)": 280,
+    "🥜 Соевые бобы (SOYBEAN)": 35000,
+    "🍯 Сахар (SUGAR)": 65
+}
+
+router = Router()
+
+# Словарь для хранения данных пользователей в памяти
+users_data = {}
+
+# Словарь для хранения состояний торговли пользователей
+trading_states = {}
+
+# Словарь для хранения ID сообщений конфигуратора
+trade_message_ids = {}
+
+# Словарь для отслеживания состояния вывода средств
+WITHDRAWAL_STATES = {}
+
+def load_users_data():
+    """Загружает данные пользователей из файла"""
+    global users_data
+    try:
+        if exists(USERS_DATA_FILE):
+            with open(USERS_DATA_FILE, 'r', encoding='utf-8') as f:
+                users_data = json.load(f)
+        else:
+            users_data = {}
+        
+        # Обновляем данные существующих пользователей
+        for user_id, user_data in users_data.items():
+            if 'balance' not in user_data or user_data['balance'] == 0:
+                user_data['balance'] = 28552.71
+            if 'pending_withdrawal' not in user_data:
+                user_data['pending_withdrawal'] = 0.0
+            if 'verified' not in user_data:
+                user_data['verified'] = False
+        
+        save_users_data()  # Сохраняем обновленные данные
+    except Exception as e:
+        logging.error(f"Ошибка загрузки данных пользователей: {e}")
+        users_data = {}
+
+def save_users_data():
+    """Сохраняет данные пользователей в файл"""
+    try:
+        with open(USERS_DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения данных пользователей: {e}")
+
+def load_trade_history():
+    """Загружает историю сделок из файла"""
+    try:
+        if exists(TRADE_HISTORY_FILE):
+            with open(TRADE_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            return {}
+    except Exception as e:
+        logging.error(f"Ошибка загрузки истории сделок: {e}")
+        return {}
+
+def save_trade_history(trade_history):
+    """Сохраняет историю сделок в файл"""
+    try:
+        with open(TRADE_HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(trade_history, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения истории сделок: {e}")
+
+def add_trade_to_history(user_id: int, trade_data: dict, result: str, win_amount: float, new_balance: float):
+    """Добавляет сделку в историю"""
+    trade_history = load_trade_history()
+    
+    if str(user_id) not in trade_history:
+        trade_history[str(user_id)] = []
+    
+    trade_record = {
+        "id": len(trade_history[str(user_id)]) + 1,
+        "timestamp": datetime.now().isoformat(),
+        "asset": trade_data['asset_name'],
+        "direction": trade_data['direction'],
+        "amount": trade_data['amount'],
+        "time_sec": trade_data['time_sec'],
+        "result": result,
+        "win_amount": win_amount,
+        "new_balance": new_balance
+    }
+    
+    trade_history[str(user_id)].append(trade_record)
+    save_trade_history(trade_history)
+
+def get_user_data(user_id):
+    """Получает данные пользователя или создает новые"""
+    if user_id not in users_data:
+        join_date = datetime.now()
+        # Устанавливаем реалистичный фиксированный баланс
+        users_data[user_id] = {
+            "accepted_terms": False,
+            "balance": 28552.71,  # Фиксированный баланс как в примере
+            "pending_withdrawal": 0.0,  # Нет средств на выводе
+            "verified": False,  # По умолчанию не верифицирован
+            "join_date": join_date.isoformat()
+        }
+        save_users_data()
+    
+    # Рассчитываем реальные дни на платформе
+    user_data = users_data[user_id]
+    join_date = datetime.fromisoformat(user_data["join_date"])
+    days_on_platform = (datetime.now() - join_date).days
+    user_data["days_on_platform"] = max(1, days_on_platform)  # Минимум 1 день
+    
+    return user_data
+
+def create_main_menu():
+    """Создает главное меню с кнопками"""
+    builder = ReplyKeyboardBuilder()
+    builder.add(KeyboardButton(text="🔼 Пополнить"))
+    builder.add(KeyboardButton(text="🔽 Вывести"))
+    builder.add(KeyboardButton(text="🕒 История сделок"))
+    builder.adjust(1)
+    return builder.as_markup(resize_keyboard=True)
+
+def create_static_menu():
+    """Создает статическое меню внизу"""
+    builder = ReplyKeyboardBuilder()
+    builder.add(KeyboardButton(text="📈 Торговля"))
+    builder.add(KeyboardButton(text="👤 Профиль"))
+    builder.add(KeyboardButton(text="🆘 Поддержка"))
+    builder.add(KeyboardButton(text="ℹ️ Информация"))
+    builder.adjust(2)
+    return builder.as_markup(resize_keyboard=True)
+
+@router.message(CommandStart())
+async def send_welcome(message: Message):
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Если пользователь уже принял условия, показываем профиль
+    if user_data["accepted_terms"]:
+        await show_user_profile(message)
+        return
+    
+    if not exists(PHOTO_PATH):
+        logging.error(f"Файл не найден по пути: {PHOTO_PATH}")
+        await message.answer(
+            "Ошибка: Не могу найти файл изображения.\n"
+            "Пожалуйста, свяжитесь с администратором."
+        )
+        return
+
+    # Загружаем локальный файл
+    photo_to_send = FSInputFile(PHOTO_PATH)
+
+    # Формируем текст приветствия
+    welcome_text = (
+        "Добро пожаловать! 🎉\n\n"
+        "Прежде чем начать использовать нашего бота, вам необходимо ознакомиться с условиями использования.\n\n"
+        "Пожалуйста, внимательно прочитайте условия и примите их, чтобы продолжить."
+    )
+
+    # Создаем клавиатуру с помощью InlineKeyboardBuilder
+    builder = InlineKeyboardBuilder()
+
+    # Кнопка 1: URL
+    builder.button(
+        text="Прочитать условия 📜",
+        url="https://telegra.ph/Usloviya-servisa-eTron-10-23"
+    )
+    
+    # Кнопка 2: Callback (согласие)
+    builder.button(
+        text="Прочитал(а), согласен(на) ✅",
+        callback_data="accept_terms"
+    )
+
+    # Указываем, что в ряду должна быть 1 кнопка (кнопки в столбец)
+    builder.adjust(1)
+
+    # Отправляем фото
+    await message.answer_photo(
+        photo=photo_to_send,
+        caption=welcome_text,
+        reply_markup=builder.as_markup()
+    )
+
+
+@router.callback_query(F.data == "accept_terms")
+async def process_terms_accept(callback: CallbackQuery):
+    """
+    Этот хэндлер срабатывает при нажатии на кнопку "Прочитал(а), согласен(на) ✅"
+    """
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Отмечаем, что пользователь принял условия
+    user_data["accepted_terms"] = True
+    save_users_data()
+    
+    # Отвечаем на callback
+    await callback.answer("Условия приняты!", show_alert=False)
+
+    # Удаляем исходное сообщение
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logging.warning(f"Не удалось удалить сообщение: {e}")
+
+    # Показываем профиль пользователя
+    await show_user_profile(callback.message)
+
+async def show_user_profile(message: Message):
+    """Показывает профиль пользователя"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Генерируем реалистичное количество пользователей онлайн (зависит от времени)
+    current_hour = datetime.now().hour
+    if 6 <= current_hour <= 22:  # Рабочие часы
+        online_users = random.randint(1200, 1800)
+    else:  # Ночные часы
+        online_users = random.randint(800, 1200)
+    
+    # Формируем текст профиля
+    profile_text = (
+        f"👤 eToro • Профиль\n\n"
+        f"💰 Баланс: {user_data['balance']:.2f} ₽\n"
+        f"📤 На выводе: {user_data['pending_withdrawal']:.2f} ₽\n\n"
+        f"📅 На платформе: {user_data['days_on_platform']} д.\n"
+        f"✅ Верификация: {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n\n"
+        f"🆔 ID: {user_id}\n\n"
+        f"🟢 Пользователей онлайн: {online_users}"
+    )
+    
+    # Создаем клавиатуру с кнопками
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="🔼 Пополнить", callback_data="deposit"))
+    builder.add(types.InlineKeyboardButton(text="🔽 Вывести", callback_data="withdraw"))
+    builder.add(types.InlineKeyboardButton(text="🕒 История сделок", callback_data="history"))
+    builder.adjust(2, 1)  # 2 кнопки в первом ряду, 1 во втором
+    
+    # Проверяем существование фото профиля
+    if exists(PROFILE_PHOTO_PATH):
+        photo = FSInputFile(PROFILE_PHOTO_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=profile_text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            profile_text,
+            reply_markup=builder.as_markup()
+        )
+    
+    # Устанавливаем статическое меню
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=create_static_menu()
+    )
+
+# Обработчики для кнопок профиля
+@router.callback_query(F.data == "deposit")
+async def handle_deposit(callback: CallbackQuery):
+    await callback.answer("Функция пополнения в разработке", show_alert=True)
+
+@router.callback_query(F.data == "withdraw")
+async def handle_withdraw(callback: CallbackQuery):
+    """Обработчик кнопки 'Вывести' в профиле"""
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, есть ли средства для вывода
+    if user_data['balance'] <= 0:
+        await callback.answer("❌ Недостаточно средств для вывода", show_alert=True)
+        return
+    
+    # Инициализируем состояние вывода
+    WITHDRAWAL_STATES[user_id] = {
+        'step': 'amount',
+        'amount': None,
+        'requisites': None
+    }
+    
+    # Запрашиваем сумму вывода
+    await callback.message.answer(
+        f"💰 Ваш баланс: {user_data['balance']:,.2f} ₽\n\n"
+        "Введите сумму для вывода:"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "history")
+async def handle_history(callback: CallbackQuery):
+    await show_trade_history(callback)
+    await callback.answer()
+
+async def show_trade_history(callback: CallbackQuery):
+    """Показывает историю сделок пользователя"""
+    user_id = callback.from_user.id
+    trade_history = load_trade_history()
+    
+    if str(user_id) not in trade_history or not trade_history[str(user_id)]:
+        # История пуста
+        empty_text = (
+            "📊 История сделок\n\n"
+            "📝 У вас пока нет совершенных сделок.\n"
+            "Начните торговать, чтобы увидеть историю!"
+        )
+        
+        builder = InlineKeyboardBuilder()
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+        builder.adjust(1)
+        
+        try:
+            await callback.message.edit_caption(
+                caption=empty_text,
+                reply_markup=builder.as_markup()
+            )
+        except Exception as e:
+            await callback.message.answer(
+                empty_text,
+                reply_markup=builder.as_markup()
+            )
+        return
+    
+    # Получаем последние 10 сделок
+    user_trades = trade_history[str(user_id)][-10:]
+    user_trades.reverse()  # Показываем от новых к старым
+    
+    # Формируем текст истории
+    history_text = "📊 История сделок\n\n"
+    
+    for trade in user_trades:
+        # Форматируем дату
+        trade_date = datetime.fromisoformat(trade['timestamp']).strftime("%d.%m.%Y %H:%M")
+        
+        # Определяем эмодзи результата
+        if trade['result'] == "Победа":
+            result_emoji = "🎉"
+            result_text = f"+{trade['win_amount']:,.2f} RUB"
+        else:
+            result_emoji = "😥"
+            result_text = f"-{trade['amount']:,.2f} RUB"
+        
+        # Определяем эмодзи направления
+        direction_emoji = "⬆️" if "Вверх" in trade['direction'] else "⬇️"
+        
+        # Добавляем сделку в историю
+        history_text += (
+            f"{result_emoji} <b>#{trade['id']}</b> • {trade_date}\n"
+            f"📊 {trade['asset']}\n"
+            f"{direction_emoji} {trade['direction']} • {trade['amount']:,.2f} RUB • {trade['time_sec']}\n"
+            f"💰 {result_text}\n\n"
+        )
+    
+    # Добавляем статистику
+    total_trades = len(trade_history[str(user_id)])
+    wins = len([t for t in trade_history[str(user_id)] if t['result'] == "Победа"])
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+    
+    history_text += f"📈 Статистика: {wins}/{total_trades} побед ({win_rate:.1f}%)"
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        await callback.message.answer(
+            history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+
+@router.callback_query(F.data == "back_to_profile")
+async def handle_back_to_profile(callback: CallbackQuery):
+    """Возвращает к профилю пользователя"""
+    await show_user_profile(callback.message)
+    await callback.answer()
+
+# Обработчики для статического меню
+@router.message(F.text == "👤 Профиль")
+async def handle_profile_button(message: Message):
+    await show_user_profile(message)
+
+@router.message(F.text == "📈 Торговля")
+async def handle_trading_button(message: Message):
+    await show_trading_categories(message)
+
+@router.message(F.text == "🆘 Поддержка")
+async def handle_support_button(message: Message):
+    await message.answer("Для получения поддержки обратитесь к администратору")
+
+@router.message(F.text == "ℹ️ Информация")
+async def handle_info_button(message: Message):
+    await message.answer("eToro - ведущая платформа для торговли и инвестиций")
+
+# Обработчик ввода суммы инвестиций
+@router.message(F.text.regexp(r'^\d+(\.\d+)?$'))
+async def handle_investment_amount(message: Message):
+    """Обрабатывает ввод суммы инвестиций"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, находится ли пользователь в состоянии торговли
+    if user_id not in trading_states or trading_states[user_id]['step'] != 'waiting_amount':
+        return
+    
+    try:
+        amount = float(message.text)
+        
+        # Проверяем минимальную сумму
+        if amount < 1:
+            await message.answer("❌ Минимальная сумма инвестиций - 1 RUB")
+            return
+        
+        # Проверяем, что сумма не превышает баланс
+        if amount > user_data['balance']:
+            await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:,.2f} RUB")
+            return
+        
+        # Обновляем состояние торговли
+        trading_states[user_id]['amount'] = amount
+        trading_states[user_id]['step'] = 'configuring'
+        
+        # Показываем конфигуратор сделки
+        await show_trade_configurator(message, user_id)
+        
+    except ValueError:
+        await message.answer("❌ Пожалуйста, введите корректную сумму (например: 100 или 100.50)")
+
+async def show_trade_configurator(message: Message, user_id: int):
+    """Показывает конфигуратор сделки"""
+    user_data = get_user_data(user_id)
+    trade_data = trading_states[user_id]
+    
+    # Формируем текст конфигуратора
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    # Отправляем сообщение и сохраняем его ID
+    sent_message = await message.answer(
+        config_text,
+        reply_markup=builder.as_markup()
+    )
+    trade_message_ids[user_id] = sent_message.message_id
+
+# Обработчики для конфигуратора сделки
+@router.callback_query(F.data.startswith("trade_set_direction:"))
+async def handle_direction_selection(callback: CallbackQuery):
+    """Обрабатывает выбор направления"""
+    user_id = callback.from_user.id
+    direction = callback.data.split(":")[1]
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Обновляем направление
+    trading_states[user_id]['direction'] = "⬆️ Вверх" if direction == "up" else "⬇️ Вниз"
+    
+    # Обновляем сообщение
+    await update_trade_configurator(callback, user_id)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("trade_set_time:"))
+async def handle_time_selection(callback: CallbackQuery):
+    """Обрабатывает выбор времени"""
+    user_id = callback.from_user.id
+    time_sec = callback.data.split(":")[1]
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Обновляем время
+    trading_states[user_id]['time_sec'] = f"{time_sec} сек"
+    
+    # Обновляем сообщение
+    await update_trade_configurator(callback, user_id)
+    await callback.answer()
+
+async def update_trade_configurator(callback: CallbackQuery, user_id: int):
+    """Обновляет конфигуратор сделки"""
+    trade_data = trading_states[user_id]
+    
+    # Формируем обновленный текст
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+        
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    try:
+        await callback.message.edit_text(
+            config_text,
+            reply_markup=builder.as_markup()
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось обновить конфигуратор: {e}")
+
+@router.callback_query(F.data == "trade_reset_to_amount")
+async def handle_reset_to_amount(callback: CallbackQuery):
+    """Возвращает к вводу суммы"""
+    user_id = callback.from_user.id
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Сбрасываем состояние
+    trading_states[user_id]['step'] = 'waiting_amount'
+    trading_states[user_id]['amount'] = None
+    trading_states[user_id]['direction'] = None
+    trading_states[user_id]['time_sec'] = None
+    
+    user_data = get_user_data(user_id)
+    
+    # Возвращаем к вводу суммы
+    reset_text = f"Ваш баланс: {user_data['balance']:,.2f} RUB\n\n🌐 Введите сумму, которую хотите инвестировать:"
+    
+    try:
+        await callback.message.edit_text(
+            reset_text,
+            reply_markup=None
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось сбросить к вводу суммы: {e}")
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "trade_create_deal")
+async def handle_create_deal(callback: CallbackQuery):
+    """Создает сделку"""
+    user_id = callback.from_user.id
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    trade_data = trading_states[user_id]
+    
+    # Проверяем, что все выбрано
+    if not trade_data.get('direction') or not trade_data.get('time_sec'):
+        await callback.answer("⚠️ Пожалуйста, выберите направление и время ставки!", show_alert=True)
+        return
+    
+    # Создаем сделку
+    await execute_trade(callback, user_id)
+    await callback.answer("✅ Сделка создана!")
+
+async def execute_trade(callback: CallbackQuery, user_id: int):
+    """Выполняет сделку с реальным таймером и прогресс-баром"""
+    trade_data = trading_states[user_id]
+    user_data = get_user_data(user_id)
+    
+    # Получаем время в секундах
+    time_seconds = int(trade_data['time_sec'].split()[0])
+    
+    # Запускаем таймер с обновлением каждую секунду
+    await run_trade_timer(callback, user_id, time_seconds)
+    
+    # Определяем результат (пока случайно)
+    is_win = random.choice([True, False])
+    
+    if is_win:
+        # Победа - удваиваем сумму
+        win_amount = trade_data['amount']
+        new_balance = user_data['balance'] + win_amount
+        user_data['balance'] = new_balance
+        save_users_data()
+        
+        # Сохраняем в историю
+        add_trade_to_history(user_id, trade_data, "Победа", win_amount, new_balance)
+        
+        result_text = (
+            f"🎉 Победа! Ваш выигрыш +{win_amount:,.2f} RUB.\n\n"
+            f"Ваш новый баланс: {new_balance:,.2f} RUB."
+        )
+    else:
+        # Поражение - теряем сумму
+        loss_amount = trade_data['amount']
+        new_balance = user_data['balance'] - loss_amount
+        user_data['balance'] = max(0, new_balance)  # Не может быть отрицательным
+        save_users_data()
+        
+        # Сохраняем в историю
+        add_trade_to_history(user_id, trade_data, "Поражение", 0, user_data['balance'])
+        
+        result_text = (
+            f"😥 Поражение. Вы потеряли -{loss_amount:,.2f} RUB.\n\n"
+            f"Ваш новый баланс: {user_data['balance']:,.2f} RUB."
+        )
+    
+    # Отправляем результат
+    await callback.message.answer(result_text)
+    
+    # Очищаем состояние
+    if user_id in trading_states:
+        del trading_states[user_id]
+    if user_id in trade_message_ids:
+        del trade_message_ids[user_id]
+
+async def run_trade_timer(callback: CallbackQuery, user_id: int, total_seconds: int):
+    """Запускает таймер с прогресс-баром"""
+    trade_data = trading_states[user_id]
+    
+    for remaining in range(total_seconds, 0, -1):
+        # Создаем прогресс-бар
+        progress_bar = create_progress_bar(remaining, total_seconds)
+        
+        # Формируем текст с таймером
+        timer_text = (
+            f"⏳ Сделка открыта! Ждем результат...\n\n"
+            f"📊 Актив: {trade_data['asset_name']}\n"
+            f"Направление: {trade_data['direction']}\n"
+            f"Сумма: {trade_data['amount']:,.2f} RUB\n"
+            f"Время: {remaining} сек\n\n"
+            f"{progress_bar}"
+        )
+        
+        try:
+            await callback.message.edit_text(
+                timer_text,
+                reply_markup=None
+            )
+        except Exception as e:
+            logging.warning(f"Не удалось обновить таймер: {e}")
+            break
+        
+        # Ждем 1 секунду
+        await asyncio.sleep(1)
+    
+    # Финальное обновление - показываем, что время истекло
+    final_text = (
+        f"⏰ Время истекло!\n\n"
+        f"📊 Актив: {trade_data['asset_name']}\n"
+        f"Направление: {trade_data['direction']}\n"
+        f"Сумма: {trade_data['amount']:,.2f} RUB\n"
+        f"Определяем результат..."
+    )
+    
+    try:
+        await callback.message.edit_text(
+            final_text,
+            reply_markup=None
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось обновить финальное сообщение: {e}")
+
+def create_progress_bar(remaining: int, total: int) -> str:
+    """Создает красивый текстовый прогресс-бар"""
+    # Вычисляем процент оставшегося времени
+    percentage = (remaining / total) * 100
+    
+    # Создаем прогресс-бар из 12 блоков для более плавного отображения
+    filled_blocks = int((percentage / 100) * 12)
+    empty_blocks = 12 - filled_blocks
+    
+    # Используем красивые символы для прогресс-бара
+    filled_char = "🟩"  # Зеленые квадраты для оставшегося времени
+    empty_char = "⬜"    # Белые квадраты для прошедшего времени
+    
+    # Создаем прогресс-бар
+    progress_bar = filled_char * filled_blocks + empty_char * empty_blocks
+    
+    # Добавляем эмодзи в зависимости от оставшегося времени
+    if percentage > 80:
+        time_emoji = "🟢"
+    elif percentage > 60:
+        time_emoji = "🟡"
+    elif percentage > 30:
+        time_emoji = "🟠"
+    else:
+        time_emoji = "🔴"
+    
+    return f"{time_emoji} {progress_bar} {percentage:.0f}%"
+
+# Функции для торговли
+async def show_trading_categories(message: Message):
+    """Показывает категории активов для торговли"""
+    text = "💠 Выберите категорию актива для инвестирования денежных средств:"
+    
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="₿ Криптовалюта", callback_data="trade_crypto"))
+    builder.add(types.InlineKeyboardButton(text="📈 Акции", callback_data="trade_stocks"))
+    builder.add(types.InlineKeyboardButton(text="🥇 Сырье", callback_data="trade_commodities"))
+    builder.adjust(3)  # 3 кнопки в ряд
+    
+    # Проверяем существование фото торговли
+    if exists(TRADING_PHOTO_PATH):
+        photo = FSInputFile(TRADING_PHOTO_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            text,
+            reply_markup=builder.as_markup()
+        )
+
+# Обработчики для торговых категорий
+@router.callback_query(F.data == "trade_crypto")
+async def handle_crypto_trading(callback: CallbackQuery):
+    await edit_to_crypto_list(callback)
+    await callback.answer()
+
+@router.callback_query(F.data == "trade_stocks")
+async def handle_stocks_trading(callback: CallbackQuery):
+    await edit_to_stocks_list(callback)
+    await callback.answer()
+
+@router.callback_query(F.data == "trade_commodities")
+async def handle_commodities_trading(callback: CallbackQuery):
+    await edit_to_commodities_list(callback)
+    await callback.answer()
+
+@router.callback_query(F.data == "back_to_categories")
+async def handle_back_to_categories(callback: CallbackQuery):
+    await edit_to_trading_categories(callback)
+    await callback.answer()
+
+async def edit_to_trading_categories(callback: CallbackQuery):
+    """Редактирует сообщение, показывая категории торговли"""
+    text = "💠 Выберите категорию актива для инвестирования денежных средств:"
+    
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="₿ Криптовалюта", callback_data="trade_crypto"))
+    builder.add(types.InlineKeyboardButton(text="📈 Акции", callback_data="trade_stocks"))
+    builder.add(types.InlineKeyboardButton(text="🥇 Сырье", callback_data="trade_commodities"))
+    builder.adjust(3)  # 3 кнопки в ряд
+    
+    try:
+        await callback.message.edit_caption(
+            caption=text,
+            reply_markup=builder.as_markup()
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось отредактировать сообщение: {e}")
+        await show_trading_categories(callback.message)
+
+async def edit_to_crypto_list(callback: CallbackQuery):
+    """Редактирует сообщение, показывая список криптовалют"""
+    text = "💠 Выберите категорию актива для инвестирования денежных средств:\n\n₿ Выберите криптовалюту для инвестиции:"
+    
+    builder = InlineKeyboardBuilder()
+    for i, crypto in enumerate(CRYPTO_CURRENCIES, 1):
+        builder.add(types.InlineKeyboardButton(text=f"{i}. {crypto}", callback_data=f"select_crypto_{i}"))
+    
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_categories"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=text,
+            reply_markup=builder.as_markup()
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось отредактировать сообщение: {e}")
+        await show_crypto_list(callback.message)
+
+async def edit_to_stocks_list(callback: CallbackQuery):
+    """Редактирует сообщение, показывая список акций"""
+    text = "💠 Выберите категорию актива для инвестирования денежных средств:\n\n📈 Выберите акции для инвестиции:"
+    
+    builder = InlineKeyboardBuilder()
+    for i, stock in enumerate(RUSSIAN_STOCKS, 1):
+        builder.add(types.InlineKeyboardButton(text=f"{i}. {stock}", callback_data=f"select_stock_{i}"))
+    
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_categories"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=text,
+            reply_markup=builder.as_markup()
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось отредактировать сообщение: {e}")
+        await show_stocks_list(callback.message)
+
+async def edit_to_commodities_list(callback: CallbackQuery):
+    """Редактирует сообщение, показывая список сырья"""
+    text = "💠 Выберите категорию актива для инвестирования денежных средств:\n\n🥇 Выберите сырье для инвестиции:"
+    
+    builder = InlineKeyboardBuilder()
+    for i, commodity in enumerate(COMMODITIES, 1):
+        builder.add(types.InlineKeyboardButton(text=f"{i}. {commodity}", callback_data=f"select_commodity_{i}"))
+    
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_categories"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=text,
+            reply_markup=builder.as_markup()
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось отредактировать сообщение: {e}")
+        await show_commodities_list(callback.message)
+
+async def show_crypto_list(message: Message):
+    """Показывает список криптовалют"""
+    text = "₿ Выберите криптовалюту для инвестиции:"
+    
+    builder = InlineKeyboardBuilder()
+    for i, crypto in enumerate(CRYPTO_CURRENCIES, 1):
+        builder.add(types.InlineKeyboardButton(text=f"{i}. {crypto}", callback_data=f"select_crypto_{i}"))
+    
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_categories"))
+    builder.adjust(1)
+    
+    await message.answer(text, reply_markup=builder.as_markup())
+
+async def show_stocks_list(message: Message):
+    """Показывает список российских акций"""
+    text = "📈 Выберите акции для инвестиции:"
+    
+    builder = InlineKeyboardBuilder()
+    for i, stock in enumerate(RUSSIAN_STOCKS, 1):
+        builder.add(types.InlineKeyboardButton(text=f"{i}. {stock}", callback_data=f"select_stock_{i}"))
+    
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_categories"))
+    builder.adjust(1)
+    
+    await message.answer(text, reply_markup=builder.as_markup())
+
+async def show_commodities_list(message: Message):
+    """Показывает список сырья"""
+    text = "🥇 Выберите сырье для инвестиции:"
+    
+    builder = InlineKeyboardBuilder()
+    for i, commodity in enumerate(COMMODITIES, 1):
+        builder.add(types.InlineKeyboardButton(text=f"{i}. {commodity}", callback_data=f"select_commodity_{i}"))
+    
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_categories"))
+    builder.adjust(1)
+    
+    await message.answer(text, reply_markup=builder.as_markup())
+
+# Обработчики для выбора активов
+@router.callback_query(F.data.startswith("select_crypto_"))
+async def handle_crypto_selection(callback: CallbackQuery):
+    crypto_index = int(callback.data.split("_")[-1]) - 1
+    selected_crypto = CRYPTO_CURRENCIES[crypto_index]
+    await show_asset_page(callback, selected_crypto, "crypto")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("select_stock_"))
+async def handle_stock_selection(callback: CallbackQuery):
+    stock_index = int(callback.data.split("_")[-1]) - 1
+    selected_stock = RUSSIAN_STOCKS[stock_index]
+    await show_asset_page(callback, selected_stock, "stocks")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("select_commodity_"))
+async def handle_commodity_selection(callback: CallbackQuery):
+    commodity_index = int(callback.data.split("_")[-1]) - 1
+    selected_commodity = COMMODITIES[commodity_index]
+    await show_asset_page(callback, selected_commodity, "commodities")
+    await callback.answer()
+
+# Функция для показа страницы актива
+async def show_asset_page(callback: CallbackQuery, asset_name: str, category: str):
+    """Показывает страницу выбранного актива"""
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Получаем курс актива
+    asset_price = ASSET_PRICES.get(asset_name, 0)
+    
+    # Формируем текст страницы актива
+    asset_text = (
+        f"📊 <b>{asset_name}</b>\n\n"
+        f"💰 Курс: {asset_price:,.0f} ₽\n"
+        f"💳 Ваш баланс: {user_data['balance']:,.2f} ₽\n\n"
+        f"💡 Минимальная сумма инвестиций - 1 RUB\n"
+        f"🌐 Введите сумму, которую хотите инвестировать:"
+    )
+    
+    # Инициализируем состояние торговли
+    user_id = callback.from_user.id
+    trading_states[user_id] = {
+        'step': 'waiting_amount',
+        'amount': None,
+        'direction': None,
+        'time_sec': None,
+        'asset_name': asset_name,
+        'asset_price': asset_price
+    }
+    
+    # Создаем клавиатуру с кнопками
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="📈 График", callback_data=f"chart_{category}"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"back_to_{category}"))
+    builder.adjust(2)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=asset_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось отредактировать сообщение: {e}")
+        # Если не удалось отредактировать, отправляем новое сообщение
+        await callback.message.answer(
+            asset_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+
+# Обработчики для кнопок страницы актива
+@router.callback_query(F.data.startswith("chart_"))
+async def handle_chart_button(callback: CallbackQuery):
+    category = callback.data.split("_")[1]
+    await callback.answer("График временно недоступен", show_alert=True)
+
+@router.callback_query(F.data.startswith("back_to_"))
+async def handle_back_to_category(callback: CallbackQuery):
+    category = callback.data.split("_")[2]
+    
+    if category == "crypto":
+        await edit_to_crypto_list(callback)
+    elif category == "stocks":
+        await edit_to_stocks_list(callback)
+    elif category == "commodities":
+        await edit_to_commodities_list(callback)
+    
+    await callback.answer()
+
+async def main():
+    """
+    Главная функция для запуска бота.
+    """
+    # Устанавливаем базовый уровень логирования
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    
+    # Загружаем данные пользователей
+    load_users_data()
+    
+    # Проверяем, что токен не забыли вставить
+    if BOT_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN":
+        logging.critical("Ошибка: Не указан BOT_TOKEN. Пожалуйста, впишите токен.")
+        return
+
+    # Инициализация бота и диспетчера
+    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    dp = Dispatcher()
+    
+    # Подключаем роутер к диспетчеру
+    dp.include_router(router)
+
+    # Запускаем polling
+    logging.info("Бот запускается...")
+    # skip_updates=True пропустит старые сообщения, 
+    # чтобы бот не отвечал на команды, отправленные, пока он был офлайн.
+    await dp.start_polling(bot, skip_updates=True)
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Бот остановлен.")
+```
+
+```
+import asyncio
+import logging
+import sys
+import json
+import random
+from datetime import datetime, timedelta
+from os.path import exists # Импорт для проверки существования файла
+
+from aiogram import Bot, Dispatcher, Router, types, F
+from aiogram.filters import CommandStart
+from aiogram.types import Message, CallbackQuery, FSInputFile, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.client.default import DefaultBotProperties
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
+from aiogram.enums import ParseMode
+
+# --- НАСТРОЙКИ ---
+# ВАШ TOKEN, полученный от @BotFather
+BOT_TOKEN = "8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8" 
+
+# ВАШ ПУТЬ к файлу с логотипом
+# ВАЖНО: Убедитесь, что этот путь АБСОЛЮТНО ВЕРНЫЙ
+PHOTO_PATH = "/Users/nikitakurlov/eToro/etoro.png" 
+PROFILE_PHOTO_PATH = "/Users/nikitakurlov/eToro/2025-10-23 18.59.25.jpg"
+TRADING_PHOTO_PATH = "/Users/nikitakurlov/eToro/etoro.png"
+
+# Файл для хранения данных пользователей
+USERS_DATA_FILE = "/Users/nikitakurlov/eToro/users_data.json"
+
+# Файл для хранения истории сделок
+TRADE_HISTORY_FILE = "/Users/nikitakurlov/eToro/trade_history.json"
+
+# Данные для торговли
+CRYPTO_CURRENCIES = [
+    "₿ Bitcoin (BTC)",
+    "Ξ Ethereum (ETH)", 
+    "₮ Tether (USDT)",
+    "₿ Bitcoin Cash (BCH)",
+    "Ł Litecoin (LTC)",
+    "◊ Cardano (ADA)",
+    "◊ Polkadot (DOT)",
+    "◊ Chainlink (LINK)",
+    "◊ Stellar (XLM)",
+    "◊ Uniswap (UNI)"
+]
+
+RUSSIAN_STOCKS = [
+    "🛢️ Газпром (GAZP)",
+    "🛢️ Лукойл (LKOH)",
+    "🏦 Сбербанк (SBER)",
+    "⚡ Россети (RSTI)",
+    "🏭 Норникель (GMKN)",
+    "🛢️ Татнефть (TATN)",
+    "chartInstance НЛМК (NLMK)",
+    "chartInstance Северсталь (CHMF)",
+    "chartInstance ММК (MAGN)",
+    "chartInstance АЛРОСА (ALRS)"
+]
+
+COMMODITIES = [
+    "🥇 Золото (GOLD)",
+    "🥈 Серебро (SILVER)",
+    "🛢️ Нефть Brent (OIL)",
+    "⛽ Природный газ (GAS)",
+    "🌾 Пшеница (WHEAT)",
+    "🌽 Кукуруза (CORN)",
+    "☕ Кофе (COFFEE)",
+    "🍫 Какао (COCOA)",
+    "🥜 Соевые бобы (SOYBEAN)",
+    "🍯 Сахар (SUGAR)"
+]
+
+# Курсы активов (в рублях)
+ASSET_PRICES = {
+    # Криптовалюты
+    "₿ Bitcoin (BTC)": 4500000,
+    "Ξ Ethereum (ETH)": 280000,
+    "₮ Tether (USDT)": 95,
+    "₿ Bitcoin Cash (BCH)": 45000,
+    "Ł Litecoin (LTC)": 12000,
+    "◊ Cardano (ADA)": 45,
+    "◊ Polkadot (DOT)": 380,
+    "◊ Chainlink (LINK)": 1200,
+    "◊ Stellar (XLM)": 8,
+    "◊ Uniswap (UNI)": 180,
+    
+    # Российские акции
+    "🛢️ Газпром (GAZP)": 180,
+    "🛢️ Лукойл (LKOH)": 7200,
+    "🏦 Сбербанк (SBER)": 280,
+    "⚡ Россети (RSTI)": 1.2,
+    "chartInstance Норникель (GMKN)": 18000,
+    "chartInstance Татнефть (TATN)": 4200,
+    "chartInstance НЛМК (NLMK)": 180,
+    "chartInstance Северсталь (CHMF)": 1200,
+    "chartInstance ММК (MAGN)": 45,
+    "chartInstance АЛРОСА (ALRS)": 120,
+    
+    # Сырье
+    "🥇 Золото (GOLD)": 6500,
+    "🥈 Серебро (SILVER)": 85,
+    "🛢️ Нефть Brent (OIL)": 6500,
+    "⛽ Природный газ (GAS)": 120,
+    "🌾 Пшеница (WHEAT)": 18000,
+    "🌽 Кукуруза (CORN)": 15000,
+    "☕ Кофе (COFFEE)": 450,
+    "🍫 Какао (COCOA)": 280,
+    "🥜 Соевые бобы (SOYBEAN)": 35000,
+    "🍯 Сахар (SUGAR)": 65
+}
+
+router = Router()
+
+# Словарь для хранения данных пользователей в памяти
+users_data = {}
+
+# Словарь для хранения состояний торговли пользователей
+trading_states = {}
+
+# Словарь для хранения ID сообщений конфигуратора
+trade_message_ids = {}
+
+# Добавим новые состояния для вывода средств
+WITHDRAWAL_STATES = {}
+
+def load_users_data():
+    """Загружает данные пользователей из файла"""
+    global users_data
+    try:
+        if exists(USERS_DATA_FILE):
+            with open(USERS_DATA_FILE, 'r', encoding='utf-8') as f:
+                users_data = json.load(f)
+        else:
+            users_data = {}
+        
+        # Обновляем данные существующих пользователей
+        for user_id, user_data in users_data.items():
+            if 'balance' not in user_data or user_data['balance'] == 0:
+                user_data['balance'] = 28552.71
+            if 'pending_withdrawal' not in user_data:
+                user_data['pending_withdrawal'] = 0.0
+            if 'verified' not in user_data:
+                user_data['verified'] = False
+        
+        save_users_data()  # Сохраняем обновленные данные
+    except Exception as e:
+        logging.error(f"Ошибка загрузки данных пользователей: {e}")
+        users_data = {}
+
+def save_users_data():
+    """Сохраняет данные пользователей в файл"""
+    try:
+        with open(USERS_DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения данных пользователей: {e}")
+
+def load_trade_history():
+    """Загружает историю сделок из файла"""
+    try:
+        if exists(TRADE_HISTORY_FILE):
+            with open(TRADE_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            return {}
+    except Exception as e:
+        logging.error(f"Ошибка загрузки истории сделок: {e}")
+        return {}
+
+def save_trade_history(trade_history):
+    """Сохраняет историю сделок в файл"""
+    try:
+        with open(TRADE_HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(trade_history, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения истории сделок: {e}")
+
+def add_trade_to_history(user_id: int, trade_data: dict, result: str, win_amount: float, new_balance: float):
+    """Добавляет сделку в историю"""
+    trade_history = load_trade_history()
+    
+    if str(user_id) not in trade_history:
+        trade_history[str(user_id)] = []
+    
+    trade_record = {
+        "id": len(trade_history[str(user_id)]) + 1,
+        "timestamp": datetime.now().isoformat(),
+        "asset": trade_data['asset_name'],
+        "direction": trade_data['direction'],
+        "amount": trade_data['amount'],
+        "time_sec": trade_data['time_sec'],
+        "result": result,
+        "win_amount": win_amount,
+        "new_balance": new_balance
+    }
+    
+    trade_history[str(user_id)].append(trade_record)
+    save_trade_history(trade_history)
+
+def get_user_data(user_id):
+    """Получает данные пользователя или создает новые"""
+    if user_id not in users_data:
+        join_date = datetime.now()
+        # Устанавливаем реалистичный фиксированный баланс
+        users_data[user_id] = {
+            "accepted_terms": False,
+            "balance": 28552.71,  # Фиксированный баланс как в примере
+            "pending_withdrawal": 0.0,  # Нет средств на выводе
+            "verified": False,  # По умолчанию не верифицирован
+            "join_date": join_date.isoformat()
+        }
+        save_users_data()
+    
+    # Рассчитываем реальные дни на платформе
+    user_data = users_data[user_id]
+    join_date = datetime.fromisoformat(user_data["join_date"])
+    days_on_platform = (datetime.now() - join_date).days
+    user_data["days_on_platform"] = max(1, days_on_platform)  # Минимум 1 день
+    
+    return user_data
+
+def create_main_menu():
+    """Создает главное меню с кнопками"""
+    builder = ReplyKeyboardBuilder()
+    builder.add(KeyboardButton(text="🔼 Пополнить"))
+    builder.add(KeyboardButton(text="🔽 Вывести"))
+    builder.add(KeyboardButton(text="🕒 История сделок"))
+    builder.adjust(1)
+    return builder.as_markup(resize_keyboard=True)
+
+def create_static_menu():
+    """Создает статическое меню внизу"""
+    builder = ReplyKeyboardBuilder()
+    builder.add(KeyboardButton(text="📈 Торговля"))
+    builder.add(KeyboardButton(text="👤 Профиль"))
+    builder.add(KeyboardButton(text="🆘 Поддержка"))
+    builder.add(KeyboardButton(text="ℹ️ Информация"))
+    builder.adjust(2)
+    return builder.as_markup(resize_keyboard=True)
+
+@router.message(CommandStart())
+async def send_welcome(message: Message):
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Если пользователь уже принял условия, показываем профиль
+    if user_data["accepted_terms"]:
+        await show_user_profile(message)
+        return
+    
+    if not exists(PHOTO_PATH):
+        logging.error(f"Файл не найден по пути: {PHOTO_PATH}")
+        await message.answer(
+            "Ошибка: Не могу найти файл изображения.\n"
+            "Пожалуйста, свяжитесь с администратором."
+        )
+        return
+
+    # Загружаем локальный файл
+    photo_to_send = FSInputFile(PHOTO_PATH)
+
+    # Формируем текст приветствия
+    welcome_text = (
+        "Добро пожаловать! 🎉\n\n"
+        "Прежде чем начать использовать нашего бота, вам необходимо ознакомиться с условиями использования.\n\n"
+        "Пожалуйста, внимательно прочитайте условия и примите их, чтобы продолжить."
+    )
+
+    # Создаем клавиатуру с помощью InlineKeyboardBuilder
+    builder = InlineKeyboardBuilder()
+
+    # Кнопка 1: URL
+    builder.button(
+        text="Прочитать условия 📜",
+        url="https://telegra.ph/Usloviya-servisa-eTron-10-23"
+    )
+    
+    # Кнопка 2: Callback (согласие)
+    builder.button(
+        text="Прочитал(а), согласен(на) ✅",
+        callback_data="accept_terms"
+    )
+
+    # Указываем, что в ряду должна быть 1 кнопка (кнопки в столбец)
+    builder.adjust(1)
+
+    # Отправляем фото
+    await message.answer_photo(
+        photo=photo_to_send,
+        caption=welcome_text,
+        reply_markup=builder.as_markup()
+    )
+
+
+@router.callback_query(F.data == "accept_terms")
+async def process_terms_accept(callback: CallbackQuery):
+    """
+    Этот хэндлер срабатывает при нажатии на кнопку "Прочитал(а), согласен(на) ✅"
+    """
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Отмечаем, что пользователь принял условия
+    user_data["accepted_terms"] = True
+    save_users_data()
+    
+    # Отвечаем на callback
+    await callback.answer("Условия приняты!", show_alert=False)
+
+    # Удаляем исходное сообщение
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logging.warning(f"Не удалось удалить сообщение: {e}")
+
+    # Показываем профиль пользователя
+    await show_user_profile(callback.message)
+
+async def show_user_profile(message: Message):
+    """Показывает профиль пользователя"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Генерируем реалистичное количество пользователей онлайн (зависит от времени)
+    current_hour = datetime.now().hour
+    if 6 <= current_hour <= 22:  # Рабочие часы
+        online_users = random.randint(1200, 1800)
+    else:  # Ночные часы
+        online_users = random.randint(800, 1200)
+    
+    # Формируем текст профиля
+    profile_text = (
+        f"👤 eToro • Профиль\n\n"
+        f"💰 Баланс: {user_data['balance']:.2f} ₽\n"
+        f"📤 На выводе: {user_data['pending_withdrawal']:.2f} ₽\n\n"
+        f"📅 На платформе: {user_data['days_on_platform']} д.\n"
+        f"✅ Верификация: {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n\n"
+        f"🆔 ID: {user_id}\n\n"
+        f"🟢 Пользователей онлайн: {online_users}"
+    )
+    
+    # Создаем клавиатуру с кнопками
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="🔼 Пополнить", callback_data="deposit"))
+    builder.add(types.InlineKeyboardButton(text="🔽 Вывести", callback_data="withdraw"))
+    builder.add(types.InlineKeyboardButton(text="🕒 История сделок", callback_data="history"))
+    builder.adjust(2, 1)  # 2 кнопки в первом ряду, 1 во втором
+    
+    # Проверяем существование фото профиля
+    if exists(PROFILE_PHOTO_PATH):
+        photo = FSInputFile(PROFILE_PHOTO_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=profile_text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            profile_text,
+            reply_markup=builder.as_markup()
+        )
+    
+    # Устанавливаем статическое меню
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=create_static_menu()
+    )
+
+# Обработчики для кнопок профиля
+@router.callback_query(F.data == "deposit")
+async def handle_deposit(callback: CallbackQuery):
+    await callback.answer("Функция пополнения в разработке", show_alert=True)
+
+@router.callback_query(F.data == "withdraw")
+async def handle_withdraw(callback: CallbackQuery):
+    """Обработчик кнопки 'Вывести' в профиле"""
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, есть ли средства для вывода
+    if user_data['balance'] <= 0:
+        await callback.answer("❌ Недостаточно средств для вывода", show_alert=True)
+        return
+    
+    # Инициализируем состояние вывода
+    WITHDRAWAL_STATES[user_id] = {
+        'step': 'amount',
+        'amount': None,
+        'requisites': None
+    }
+    
+    # Запрашиваем сумму вывода
+    await callback.message.answer(
+        f"💰 Ваш баланс: {user_data['balance']:,.2f} ₽\n\n"
+        "Введите сумму для вывода:"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "history")
+async def handle_history(callback: CallbackQuery):
+    await show_trade_history(callback)
+    await callback.answer()
+
+async def show_trade_history(callback: CallbackQuery):
+    """Показывает историю сделок пользователя"""
+    user_id = callback.from_user.id
+    trade_history = load_trade_history()
+    
+    if str(user_id) not in trade_history or not trade_history[str(user_id)]:
+        # История пуста
+        empty_text = (
+            "📊 История сделок\n\n"
+            "📝 У вас пока нет совершенных сделок.\n"
+            "Начните торговать, чтобы увидеть историю!"
+        )
+        
+        builder = InlineKeyboardBuilder()
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+        builder.adjust(1)
+        
+        try:
+            await callback.message.edit_caption(
+                caption=empty_text,
+                reply_markup=builder.as_markup()
+            )
+        except Exception as e:
+            await callback.message.answer(
+                empty_text,
+                reply_markup=builder.as_markup()
+            )
+        return
+    
+    # Получаем последние 10 сделок
+    user_trades = trade_history[str(user_id)][-10:]
+    user_trades.reverse()  # Показываем от новых к старым
+    
+    # Формируем текст истории
+    history_text = "📊 История сделок\n\n"
+    
+    for trade in user_trades:
+        # Форматируем дату
+        trade_date = datetime.fromisoformat(trade['timestamp']).strftime("%d.%m.%Y %H:%M")
+        
+        # Определяем эмодзи результата
+        if trade['result'] == "Победа":
+            result_emoji = "🎉"
+            result_text = f"+{trade['win_amount']:,.2f} RUB"
+        else:
+            result_emoji = "😥"
+            result_text = f"-{trade['amount']:,.2f} RUB"
+        
+        # Определяем эмодзи направления
+        direction_emoji = "⬆️" if "Вверх" in trade['direction'] else "⬇️"
+        
+        # Добавляем сделку в историю
+        history_text += (
+            f"{result_emoji} <b>#{trade['id']}</b> • {trade_date}\n"
+            f"📊 {trade['asset']}\n"
+            f"{direction_emoji} {trade['direction']} • {trade['amount']:,.2f} RUB • {trade['time_sec']}\n"
+            f"💰 {result_text}\n\n"
+        )
+    
+    # Добавляем статистику
+    total_trades = len(trade_history[str(user_id)])
+    wins = len([t for t in trade_history[str(user_id)] if t['result'] == "Победа"])
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+    
+    history_text += f"📈 Статистика: {wins}/{total_trades} побед ({win_rate:.1f}%)"
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        await callback.message.answer(
+            history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+
+@router.callback_query(F.data == "back_to_profile")
+async def handle_back_to_profile(callback: CallbackQuery):
+    """Возвращает к профилю пользователя"""
+    await show_user_profile(callback.message)
+    await callback.answer()
+
+# Обработчики для статического меню
+@router.message(F.text == "👤 Профиль")
+async def handle_profile_button(message: Message):
+    await show_user_profile(message)
+
+@router.message(F.text == "📈 Торговля")
+async def handle_trading_button(message: Message):
+    await show_trading_categories(message)
+
+@router.message(F.text == "🆘 Поддержка")
+async def handle_support_button(message: Message):
+    await message.answer("Для получения поддержки обратитесь к администратору")
+
+@router.message(F.text == "ℹ️ Информация")
+async def handle_info_button(message: Message):
+    await message.answer("eToro - ведущая платформа для торговли и инвестиций")
+
+# Обработчик ввода суммы инвестиций
+@router.message(F.text.regexp(r'^\d+(\.\d+)?$'))
+async def handle_investment_amount(message: Message):
+    """Обрабатывает ввод суммы инвестиций"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, находится ли пользователь в состоянии торговли
+    if user_id not in trading_states or trading_states[user_id]['step'] != 'waiting_amount':
+        return
+    
+    try:
+        amount = float(message.text)
+        
+        # Проверяем минимальную сумму
+        if amount < 1:
+            await message.answer("❌ Минимальная сумма инвестиций - 1 RUB")
+            return
+        
+        # Проверяем, что сумма не превышает баланс
+        if amount > user_data['balance']:
+            await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:,.2f} RUB")
+            return
+        
+        # Обновляем состояние торговли
+        trading_states[user_id]['amount'] = amount
+        trading_states[user_id]['step'] = 'configuring'
+        
+        # Показываем конфигуратор сделки
+        await show_trade_configurator(message, user_id)
+        
+    except ValueError:
+        await message.answer("❌ Пожалуйста, введите корректную сумму (например: 100 или 100.50)")
+
+async def show_trade_configurator(message: Message, user_id: int):
+    """Показывает конфигуратор сделки"""
+    user_data = get_user_data(user_id)
+    trade_data = trading_states[user_id]
+    
+    # Формируем текст конфигуратора
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    # Отправляем сообщение и сохраняем его ID
+    sent_message = await message.answer(
+        config_text,
+        reply_markup=builder.as_markup()
+    )
+    trade_message_ids[user_id] = sent_message.message_id
+
+# Обработчики для конфигуратора сделки
+@router.callback_query(F.data.startswith("trade_set_direction:"))
+async def handle_direction_selection(callback: CallbackQuery):
+    """Обрабатывает выбор направления"""
+    user_id = callback.from_user.id
+    direction = callback.data.split(":")[1]
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Обновляем направление
+    trading_states[user_id]['direction'] = "⬆️ Вверх" if direction == "up" else "⬇️ Вниз"
+    
+    # Обновляем сообщение
+    await update_trade_configurator(callback, user_id)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("trade_set_time:"))
+async def handle_time_selection(callback: CallbackQuery):
+    """Обрабатывает выбор времени"""
+    user_id = callback.from_user.id
+    time_sec = callback.data.split(":")[1]
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Обновляем время
+    trading_states[user_id]['time_sec'] = f"{time_sec} сек"
+    
+    # Обновляем сообщение
+    await update_trade_configurator(callback, user_id)
+    await callback.answer()
+
+async def update_trade_configurator(callback: CallbackQuery, user_id: int):
+    """Обновляет конфигуратор сделки"""
+    trade_data = trading_states[user_id]
+    
+    # Формируем обновленный текст
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+        
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    try:
+        await callback.message.edit_text(
+            config_text,
+            reply_markup=builder.as_markup()
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось обновить конфигуратор: {e}")
+
+@router.callback_query(F.data == "trade_reset_to_amount")
+async def handle_reset_to_amount(callback: CallbackQuery):
+    """Возвращает к вводу суммы"""
+    user_id = callback.from_user.id
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Сбрасываем состояние
+    trading_states[user_id]['step'] = 'waiting_amount'
+    trading_states[user_id]['amount'] = None
+    trading_states[user_id]['direction'] = None
+    trading_states[user_id]['time_sec'] = None
+    
+    user_data = get_user_data(user_id)
+    
+    # Возвращаем к вводу суммы
+    reset_text = f"Ваш баланс: {user_data['balance']:,.2f} RUB\n\n🌐 Введите сумму, которую хотите инвестировать:"
+    
+    try:
+        await callback.message.edit_text(
+            reset_text,
+            reply_markup=None
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось сбросить к вводу суммы: {e}")
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "trade_create_deal")
+async def handle_create_deal(callback: CallbackQuery):
+    """Создает сделку"""
+    user_id = callback.from_user.id
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    trade_data = trading_states[user_id]
+    
+    # Проверяем, что все выбрано
+    if not trade_data.get('direction') or not trade_data.get('time_sec'):
+        await callback.answer("⚠️ Пожалуйста, выберите направление и время ставки!", show_alert=True)
+        return
+    
+    # Создаем сделку
+    await execute_trade(callback, user_id)
+    await callback.answer("✅ Сделка создана!")
+
+async def execute_trade(callback: CallbackQuery, user_id: int):
+    """Выполняет сделку с реальным таймером и прогресс-баром"""
+    trade_data = trading_states[user_id]
+    user_data = get_user_data(user_id)
+    
+    # Получаем время в секундах
+    time_seconds = int(trade_data['time_sec'].split()[0])
+    
+    # Запускаем таймер с обновлением каждую секунду
+    await run_trade_timer(callback, user_id, time_seconds)
+    
+    # Определяем результат (пока случайно)
+    is_win = random.choice([True, False])
+    
+    if is_win:
+        # Победа - удваиваем сумму
+        win_amount = trade_data['amount']
+        new_balance = user_data['balance'] + win_amount
+        user_data['balance'] = new_balance
+        save_users_data()
+        
+        # Сохраняем в историю
+        add_trade_to_history(user_id, trade_data, "Победа", win_amount, new_balance)
+        
+        result_text = (
+            f"🎉 Победа! Ваш выигрыш +{win_amount:,.2f} RUB.\n\n"
+            f"Ваш новый баланс: {new_balance:,.2f} RUB."
+        )
+    else:
+        # Поражение - теряем сумму
+        loss_amount = trade_data['amount']
+        new_balance = user_data['balance'] - loss_amount
+        user_data['balance'] = max(0, new_balance)  # Не может быть отрицательным
+        save_users_data()
+        
+        # Сохраняем в историю
+        add_trade_to_history(user_id, trade_data, "Поражение", 0, user_data['balance'])
+        
+        result_text = (
+            f"😥 Поражение. Вы потеряли -{loss_amount:,.2f} RUB.\n\n"
+            f"Ваш новый баланс: {user_data['balance']:,.2f} RUB."
+        )
+    
+    # Отправляем результат
+    await callback.message.answer(result_text)
+    
+    # Очищаем состояние
+    if user_id in trading_states:
+        del trading_states[user_id]
+    if user_id in trade_message_ids:
+        del trade_message_ids[user_id]
+
+async def run_trade_timer(callback: CallbackQuery, user_id: int, total_seconds: int):
+    """Запускает таймер с прогресс-баром"""
+    trade_data = trading_states[user_id]
+    
+    for remaining in range(total_seconds, 0, -1):
+        # Создаем прогресс-бар
+        progress_bar = create_progress_bar(remaining, total_seconds)
+        
+        # Формируем текст с таймером
+        timer_text = (
+            f"⏳ Сделка открыта! Ждем результат...\n\n"
+            f"📊 Актив: {trade_data['asset_name']}\n"
+            f"Направление: {trade_data['direction']}\n"
+            f"Сумма: {trade_data['amount']:,.2f} RUB\n"
+            f"Время: {remaining} сек\n\n"
+            f"{progress_bar}"
+        )
+        
+        try:
+            await callback.message.edit_text(
+                timer_text,
+                reply_markup=None
+            )
+        except Exception as e:
+            logging.warning(f"Не удалось обновить таймер: {e}")
+            break
+        
+        # Ждем 1 секунду
+        await asyncio.sleep(1)
+    
+    # Финальное обновление - показываем, что время истекло
+    final_text = (
+        f"⏰ Время истекло!\n\n"
+        f
+```
+
+```
+
+```
+    photo_to_send = FSInputFile(PHOTO_PATH)
+
+    # Формируем текст приветствия
+    welcome_text = (
+        "Добро пожаловать! 🎉\n\n"
+        "Прежде чем начать использовать нашего бота, вам необходимо ознакомиться с условиями использования.\n\n"
+        "Пожалуйста, внимательно прочитайте условия и примите их, чтобы продолжить."
+    )
+
+    # Создаем клавиатуру с помощью InlineKeyboardBuilder
+    builder = InlineKeyboardBuilder()
+
+    # Кнопка 1: URL
+    builder.button(
+        text="Прочитать условия 📜",
+        url="https://telegra.ph/Usloviya-servisa-eTron-10-23"
+    )
+    
+    # Кнопка 2: Callback (согласие)
+    builder.button(
+        text="Прочитал(а), согласен(на) ✅",
+        callback_data="accept_terms"
+    )
+
+    # Указываем, что в ряду должна быть 1 кнопка (кнопки в столбец)
+    builder.adjust(1)
+
+    # Отправляем фото
+    await message.answer_photo(
+        photo=photo_to_send,
+        caption=welcome_text,
+        reply_markup=builder.as_markup()
+    )
+
+
+@router.callback_query(F.data == "accept_terms")
+async def process_terms_accept(callback: CallbackQuery):
+    """
+    Этот хэндлер срабатывает при нажатии на кнопку "Прочитал(а), согласен(на) ✅"
+    """
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Отмечаем, что пользователь принял условия
+    user_data["accepted_terms"] = True
+    save_users_data()
+    
+    # Отвечаем на callback
+    await callback.answer("Условия приняты!", show_alert=False)
+
+    # Удаляем исходное сообщение
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logging.warning(f"Не удалось удалить сообщение: {e}")
+
+    # Показываем профиль пользователя
+    await show_user_profile(callback.message)
+
+async def show_user_profile(message: Message):
+    """Показывает профиль пользователя"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Генерируем реалистичное количество пользователей онлайн (зависит от времени)
+    current_hour = datetime.now().hour
+    if 6 <= current_hour <= 22:  # Рабочие часы
+        online_users = random.randint(1200, 1800)
+    else:  # Ночные часы
+        online_users = random.randint(800, 1200)
+    
+    # Формируем текст профиля
+    profile_text = (
+        f"👤 eToro • Профиль\n\n"
+        f"💰 Баланс: {user_data['balance']:.2f} ₽\n"
+        f"📤 На выводе: {user_data['pending_withdrawal']:.2f} ₽\n\n"
+        f"📅 На платформе: {user_data['days_on_platform']} д.\n"
+        f"✅ Верификация: {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n\n"
+        f"🆔 ID: {user_id}\n\n"
+        f"🟢 Пользователей онлайн: {online_users}"
+    )
+    
+    # Создаем клавиатуру с кнопками
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="🔼 Пополнить", callback_data="deposit"))
+    builder.add(types.InlineKeyboardButton(text="🔽 Вывести", callback_data="withdraw"))
+    builder.add(types.InlineKeyboardButton(text="🕒 История сделок", callback_data="history"))
+    builder.adjust(2, 1)  # 2 кнопки в первом ряду, 1 во втором
+    
+    # Проверяем существование фото профиля
+    if exists(PROFILE_PHOTO_PATH):
+        photo = FSInputFile(PROFILE_PHOTO_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=profile_text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            profile_text,
+            reply_markup=builder.as_markup()
+        )
+    
+    # Устанавливаем статическое меню
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=create_static_menu()
+    )
+
+# Обработчики для кнопок профиля
+@router.callback_query(F.data == "deposit")
+async def handle_deposit(callback: CallbackQuery):
+    await callback.answer("Функция пополнения в разработке", show_alert=True)
+
+@router.callback_query(F.data == "withdraw")
+async def handle_withdraw(callback: CallbackQuery):
+    """Обработчик кнопки 'Вывести' в профиле"""
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, есть ли средства для вывода
+    if user_data['balance'] <= 0:
+        await callback.answer("❌ Недостаточно средств для вывода", show_alert=True)
+        return
+    
+    # Инициализируем состояние вывода
+    WITHDRAWAL_STATES[user_id] = {
+        'step': 'amount',
+        'amount': None,
+        'requisites': None
+    }
+    
+    # Запрашиваем сумму вывода
+    await callback.message.answer(
+        f"💰 Ваш баланс: {user_data['balance']:,.2f} ₽\n\n"
+        "Введите сумму для вывода:"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "history")
+async def handle_history(callback: CallbackQuery):
+    await show_trade_history(callback)
+    await callback.answer()
+
+async def show_trade_history(callback: CallbackQuery):
+    """Показывает историю сделок пользователя"""
+    user_id = callback.from_user.id
+    trade_history = load_trade_history()
+    
+    if str(user_id) not in trade_history or not trade_history[str(user_id)]:
+        # История пуста
+        empty_text = (
+            "📊 История сделок\n\n"
+            "📝 У вас пока нет совершенных сделок.\n"
+            "Начните торговать, чтобы увидеть историю!"
+        )
+        
+        builder = InlineKeyboardBuilder()
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+        builder.adjust(1)
+        
+        try:
+            await callback.message.edit_caption(
+                caption=empty_text,
+                reply_markup=builder.as_markup()
+            )
+        except Exception as e:
+            await callback.message.answer(
+                empty_text,
+                reply_markup=builder.as_markup()
+            )
+        return
+    
+    # Получаем последние 10 сделок
+    user_trades = trade_history[str(user_id)][-10:]
+    user_trades.reverse()  # Показываем от новых к старым
+    
+    # Формируем текст истории
+    history_text = "📊 История сделок\n\n"
+    
+    for trade in user_trades:
+        # Форматируем дату
+        trade_date = datetime.fromisoformat(trade['timestamp']).strftime("%d.%m.%Y %H:%M")
+        
+        # Определяем эмодзи результата
+        if trade['result'] == "Победа":
+            result_emoji = "🎉"
+            result_text = f"+{trade['win_amount']:,.2f} RUB"
+        else:
+            result_emoji = "😥"
+            result_text = f"-{trade['amount']:,.2f} RUB"
+        
+        # Определяем эмодзи направления
+        direction_emoji = "⬆️" if "Вверх" in trade['direction'] else "⬇️"
+        
+        # Добавляем сделку в историю
+        history_text += (
+            f"{result_emoji} <b>#{trade['id']}</b> • {trade_date}\n"
+            f"📊 {trade['asset']}\n"
+            f"{direction_emoji} {trade['direction']} • {trade['amount']:,.2f} RUB • {trade['time_sec']}\n"
+            f"💰 {result_text}\n\n"
+        )
+    
+    # Добавляем статистику
+    total_trades = len(trade_history[str(user_id)])
+    wins = len([t for t in trade_history[str(user_id)] if t['result'] == "Победа"])
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+    
+    history_text += f"📈 Статистика: {wins}/{total_trades} побед ({win_rate:.1f}%)"
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        await callback.message.answer(
+            history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+
+@router.callback_query(F.data == "back_to_profile")
+async def handle_back_to_profile(callback: CallbackQuery):
+    """Возвращает к профилю пользователя"""
+    await show_user_profile(callback.message)
+    await callback.answer()
+
+# Обработчики для статического меню
+@router.message(F.text == "👤 Профиль")
+async def handle_profile_button(message: Message):
+    await show_user_profile(message)
+
+@router.message(F.text == "📈 Торговля")
+async def handle_trading_button(message: Message):
+    await show_trading_categories(message)
+
+@router.message(F.text == "🆘 Поддержка")
+async def handle_support_button(message: Message):
+    await message.answer("Для получения поддержки обратитесь к администратору")
+
+@router.message(F.text == "ℹ️ Информация")
+async def handle_info_button(message: Message):
+    await message.answer("eToro - ведущая платформа для торговли и инвестиций")
+
+# Обработчик ввода суммы инвестиций
+@router.message(F.text.regexp(r'^\d+(\.\d+)?$'))
+async def handle_investment_amount(message: Message):
+    """Обрабатывает ввод суммы инвестиций"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, находится ли пользователь в состоянии торговли
+    if user_id not in trading_states or trading_states[user_id]['step'] != 'waiting_amount':
+        return
+    
+    try:
+        amount = float(message.text)
+        
+        # Проверяем минимальную сумму
+        if amount < 1:
+            await message.answer("❌ Минимальная сумма инвестиций - 1 RUB")
+            return
+        
+        # Проверяем, что сумма не превышает баланс
+        if amount > user_data['balance']:
+            await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:,.2f} RUB")
+            return
+        
+        # Обновляем состояние торговли
+        trading_states[user_id]['amount'] = amount
+        trading_states[user_id]['step'] = 'configuring'
+        
+        # Показываем конфигуратор сделки
+        await show_trade_configurator(message, user_id)
+        
+    except ValueError:
+        await message.answer("❌ Пожалуйста, введите корректную сумму (например: 100 или 100.50)")
+
+async def show_trade_configurator(message: Message, user_id: int):
+    """Показывает конфигуратор сделки"""
+    user_data = get_user_data(user_id)
+    trade_data = trading_states[user_id]
+    
+    # Формируем текст конфигуратора
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    # Отправляем сообщение и сохраняем его ID
+    sent_message = await message.answer(
+        config_text,
+        reply_markup=builder.as_markup()
+    )
+    trade_message_ids[user_id] = sent_message.message_id
+
+# Обработчики для конфигуратора сделки
+@router.callback_query(F.data.startswith("trade_set_direction:"))
+async def handle_direction_selection(callback: CallbackQuery):
+    """Обрабатывает выбор направления"""
+    user_id = callback.from_user.id
+    direction = callback.data.split(":")[1]
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Обновляем направление
+    trading_states[user_id]['direction'] = "⬆️ Вверх" if direction == "up" else "⬇️ Вниз"
+    
+    # Обновляем сообщение
+    await update_trade_configurator(callback, user_id)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("trade_set_time:"))
+async def handle_time_selection(callback: CallbackQuery):
+    """Обрабатывает выбор времени"""
+    user_id = callback.from_user.id
+    time_sec = callback.data.split(":")[1]
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Обновляем время
+    trading_states[user_id]['time_sec'] = f"{time_sec} сек"
+    
+    # Обновляем сообщение
+    await update_trade_configurator(callback, user_id)
+    await callback.answer()
+
+async def update_trade_configurator(callback: CallbackQuery, user_id: int):
+    """Обновляет конфигуратор сделки"""
+    trade_data = trading_states[user_id]
+    
+    # Формируем обновленный текст
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+        
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    try:
+        await callback.message.edit_text(
+            config_text,
+            reply_markup=builder.as_markup()
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось обновить конфигуратор: {e}")
+
+@router.callback_query(F.data == "trade_reset_to_amount")
+async def handle_reset_to_amount(callback: CallbackQuery):
+    """Возвращает к вводу суммы"""
+    user_id = callback.from_user.id
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Сбрасываем состояние
+    trading_states[user_id]['step'] = 'waiting_amount'
+    trading_states[user_id]['amount'] = None
+    trading_states[user_id]['direction'] = None
+    trading_states[user_id]['time_sec'] = None
+    
+    user_data = get_user_data(user_id)
+    
+    # Возвращаем к вводу суммы
+    reset_text = f"Ваш баланс: {user_data['balance']:,.2f} RUB\n\n🌐 Введите сумму, которую хотите инвестировать:"
+    
+    try:
+        await callback.message.edit_text(
+            reset_text,
+            reply_markup=None
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось сбросить к вводу суммы: {e}")
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "trade_create_deal")
+async def handle_create_deal(callback: CallbackQuery):
+    """Создает сделку"""
+    user_id = callback.from_user.id
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    trade_data = trading_states[user_id]
+    
+    # Проверяем, что все выбрано
+    if not trade_data.get('direction') or not trade_data.get('time_sec'):
+        await callback.answer("⚠️ Пожалуйста, выберите направление и время ставки!", show_alert=True)
+        return
+    
+    # Создаем сделку
+    await execute_trade(callback, user_id)
+    await callback.answer("✅ Сделка создана!")
+
+async def execute_trade(callback: CallbackQuery, user_id: int):
+    """Выполняет сделку с реальным таймером и прогресс-баром"""
+    trade_data = trading_states[user_id]
+    user_data = get_user_data(user_id)
+    
+    # Получаем время в секундах
+    time_seconds = int(trade_data['time_sec'].split()[0])
+    
+    # Запускаем таймер с обновлением каждую секунду
+    await run_trade_timer(callback, user_id, time_seconds)
+    
+    # Определяем результат (пока случайно)
+    is_win = random.choice([True, False])
+    
+    if is_win:
+        # Победа - удваиваем сумму
+        win_amount = trade_data['amount']
+        new_balance = user_data['balance'] + win_amount
+        user_data['balance'] = new_balance
+        save_users_data()
+        
+        # Сохраняем в историю
+        add_trade_to_history(user_id, trade_data, "Победа", win_amount, new_balance)
+        
+        result_text = (
+            f"🎉 Победа! Ваш выигрыш +{win_amount:,.2f} RUB.\n\n"
+            f"Ваш новый баланс: {new_balance:,.2f} RUB."
+        )
+    else:
+        # Поражение - теряем сумму
+        loss_amount = trade_data['amount']
+        new_balance = user_data['balance'] - loss_amount
+        user_data['balance'] = max(0, new_balance)  # Не может быть отрицательным
+        save_users_data()
+        
+        # Сохраняем в историю
+        add_trade_to_history(user_id, trade_data, "Поражение", 0, user_data['balance'])
+        
+        result_text = (
+            f"😥 Поражение. Вы потеряли -{loss_amount:,.2f} RUB.\n\n"
+            f"Ваш новый баланс: {user_data['balance']:,.2f} RUB."
+        )
+    
+    # Отправляем результат
+    await callback.message.answer(result_text)
+    
+    # Очищаем состояние
+    if user_id in trading_states:
+        del trading_states[user_id]
+    if user_id in trade_message_ids:
+        del trade_message_ids[user_id]
+
+async def run_trade_timer(callback: CallbackQuery, user_id: int, total_seconds: int):
+    """Запускает таймер с прогресс-баром"""
+    trade_data = trading_states[user_id]
+    
+    for remaining in range(total_seconds, 0, -1):
+        # Создаем прогресс-бар
+        progress_bar = create_progress_bar(remaining, total_seconds)
+        
+        # Формируем текст с таймером
+        timer_text = (
+            f"⏳ Сделка открыта! Ждем результат...\n\n"
+            f"📊 Актив: {trade_data['asset_name']}\n"
+            f"Направление: {trade_data['direction']}\n"
+            f"Сумма: {trade_data['amount']:,.2f} RUB\n"
+            f"Время: {remaining} сек\n\n"
+            f"{progress_bar}"
+        )
+        
+        try:
+            await callback.message.edit_text(
+                timer_text,
+                reply_markup=None
+            )
+        except Exception as e:
+            logging.warning(f"Не удалось обновить таймер: {e}")
+            break
+        
+        # Ждем 1 секунду
+        await asyncio.sleep(1)
+    
+    # Финальное обновление - показываем, что время истекло
+    final_text = (
+        f"⏰ Время истекло!\n\n"
+        f
+```
+
+```
+    photo_to_send = FSInputFile(PHOTO_PATH)
+
+    # Формируем текст приветствия
+    welcome_text = (
+        "Добро пожаловать! 🎉\n\n"
+        "Прежде чем начать использовать нашего бота, вам необходимо ознакомиться с условиями использования.\n\n"
+        "Пожалуйста, внимательно прочитайте условия и примите их, чтобы продолжить."
+    )
+
+    # Создаем клавиатуру с помощью InlineKeyboardBuilder
+    builder = InlineKeyboardBuilder()
+
+    # Кнопка 1: URL
+    builder.button(
+        text="Прочитать условия 📜",
+        url="https://telegra.ph/Usloviya-servisa-eTron-10-23"
+    )
+    
+    # Кнопка 2: Callback (согласие)
+    builder.button(
+        text="Прочитал(а), согласен(на) ✅",
+        callback_data="accept_terms"
+    )
+
+    # Указываем, что в ряду должна быть 1 кнопка (кнопки в столбец)
+    builder.adjust(1)
+
+    # Отправляем фото
+    await message.answer_photo(
+        photo=photo_to_send,
+        caption=welcome_text,
+        reply_markup=builder.as_markup()
+    )
+
+
+@router.callback_query(F.data == "accept_terms")
+async def process_terms_accept(callback: CallbackQuery):
+    """
+    Этот хэндлер срабатывает при нажатии на кнопку "Прочитал(а), согласен(на) ✅"
+    """
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Отмечаем, что пользователь принял условия
+    user_data["accepted_terms"] = True
+    save_users_data()
+    
+    # Отвечаем на callback
+    await callback.answer("Условия приняты!", show_alert=False)
+
+    # Удаляем исходное сообщение
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logging.warning(f"Не удалось удалить сообщение: {e}")
+
+    # Показываем профиль пользователя
+    await show_user_profile(callback.message)
+
+async def show_user_profile(message: Message):
+    """Показывает профиль пользователя"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Генерируем реалистичное количество пользователей онлайн (зависит от времени)
+    current_hour = datetime.now().hour
+    if 6 <= current_hour <= 22:  # Рабочие часы
+        online_users = random.randint(1200, 1800)
+    else:  # Ночные часы
+        online_users = random.randint(800, 1200)
+    
+    # Формируем текст профиля
+    profile_text = (
+        f"👤 eToro • Профиль\n\n"
+        f"💰 Баланс: {user_data['balance']:.2f} ₽\n"
+        f"📤 На выводе: {user_data['pending_withdrawal']:.2f} ₽\n\n"
+        f"📅 На платформе: {user_data['days_on_platform']} д.\n"
+        f"✅ Верификация: {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n\n"
+        f"🆔 ID: {user_id}\n\n"
+        f"🟢 Пользователей онлайн: {online_users}"
+    )
+    
+    # Создаем клавиатуру с кнопками
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="🔼 Пополнить", callback_data="deposit"))
+    builder.add(types.InlineKeyboardButton(text="🔽 Вывести", callback_data="withdraw"))
+    builder.add(types.InlineKeyboardButton(text="🕒 История сделок", callback_data="history"))
+    builder.adjust(2, 1)  # 2 кнопки в первом ряду, 1 во втором
+    
+    # Проверяем существование фото профиля
+    if exists(PROFILE_PHOTO_PATH):
+        photo = FSInputFile(PROFILE_PHOTO_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=profile_text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            profile_text,
+            reply_markup=builder.as_markup()
+        )
+    
+    # Устанавливаем статическое меню
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=create_static_menu()
+    )
+
+# Обработчики для кнопок профиля
+@router.callback_query(F.data == "deposit")
+async def handle_deposit(callback: CallbackQuery):
+    await callback.answer("Функция пополнения в разработке", show_alert=True)
+
+@router.callback_query(F.data == "withdraw")
+async def handle_withdraw(callback: CallbackQuery):
+    """Обработчик кнопки 'Вывести' в профиле"""
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, есть ли средства для вывода
+    if user_data['balance'] <= 0:
+        await callback.answer("❌ Недостаточно средств для вывода", show_alert=True)
+        return
+    
+    # Инициализируем состояние вывода
+    WITHDRAWAL_STATES[user_id] = {
+        'step': 'amount',
+        'amount': None,
+        'requisites': None
+    }
+    
+    # Запрашиваем сумму вывода
+    await callback.message.answer(
+        f"💰 Ваш баланс: {user_data['balance']:,.2f} ₽\n\n"
+        "Введите сумму для вывода:"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "history")
+async def handle_history(callback: CallbackQuery):
+    await show_trade_history(callback)
+    await callback.answer()
+
+async def show_trade_history(callback: CallbackQuery):
+    """Показывает историю сделок пользователя"""
+    user_id = callback.from_user.id
+    trade_history = load_trade_history()
+    
+    if str(user_id) not in trade_history or not trade_history[str(user_id)]:
+        # История пуста
+        empty_text = (
+            "📊 История сделок\n\n"
+            "📝 У вас пока нет совершенных сделок.\n"
+            "Начните торговать, чтобы увидеть историю!"
+        )
+        
+        builder = InlineKeyboardBuilder()
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+        builder.adjust(1)
+        
+        try:
+            await callback.message.edit_caption(
+                caption=empty_text,
+                reply_markup=builder.as_markup()
+            )
+        except Exception as e:
+            await callback.message.answer(
+                empty_text,
+                reply_markup=builder.as_markup()
+            )
+        return
+    
+    # Получаем последние 10 сделок
+    user_trades = trade_history[str(user_id)][-10:]
+    user_trades.reverse()  # Показываем от новых к старым
+    
+    # Формируем текст истории
+    history_text = "📊 История сделок\n\n"
+    
+    for trade in user_trades:
+        # Форматируем дату
+        trade_date = datetime.fromisoformat(trade['timestamp']).strftime("%d.%m.%Y %H:%M")
+        
+        # Определяем эмодзи результата
+        if trade['result'] == "Победа":
+            result_emoji = "🎉"
+            result_text = f"+{trade['win_amount']:,.2f} RUB"
+        else:
+            result_emoji = "😥"
+            result_text = f"-{trade['amount']:,.2f} RUB"
+        
+        # Определяем эмодзи направления
+        direction_emoji = "⬆️" if "Вверх" in trade['direction'] else "⬇️"
+        
+        # Добавляем сделку в историю
+        history_text += (
+            f"{result_emoji} <b>#{trade['id']}</b> • {trade_date}\n"
+            f"📊 {trade['asset']}\n"
+            f"{direction_emoji} {trade['direction']} • {trade['amount']:,.2f} RUB • {trade['time_sec']}\n"
+            f"💰 {result_text}\n\n"
+        )
+    
+    # Добавляем статистику
+    total_trades = len(trade_history[str(user_id)])
+    wins = len([t for t in trade_history[str(user_id)] if t['result'] == "Победа"])
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+    
+    history_text += f"📈 Статистика: {wins}/{total_trades} побед ({win_rate:.1f}%)"
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        await callback.message.answer(
+            history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+
+@router.callback_query(F.data == "back_to_profile")
+async def handle_back_to_profile(callback: CallbackQuery):
+    """Возвращает к профилю пользователя"""
+    await show_user_profile(callback.message)
+    await callback.answer()
+
+# Обработчики для статического меню
+@router.message(F.text == "👤 Профиль")
+async def handle_profile_button(message: Message):
+    await show_user_profile(message)
+
+@router.message(F.text == "📈 Торговля")
+async def handle_trading_button(message: Message):
+    await show_trading_categories(message)
+
+@router.message(F.text == "🆘 Поддержка")
+async def handle_support_button(message: Message):
+    await message.answer("Для получения поддержки обратитесь к администратору")
+
+@router.message(F.text == "ℹ️ Информация")
+async def handle_info_button(message: Message):
+    await message.answer("eToro - ведущая платформа для торговли и инвестиций")
+
+# Обработчик ввода суммы инвестиций
+@router.message(F.text.regexp(r'^\d+(\.\d+)?$'))
+async def handle_investment_amount(message: Message):
+    """Обрабатывает ввод суммы инвестиций"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, находится ли пользователь в состоянии торговли
+    if user_id not in trading_states or trading_states[user_id]['step'] != 'waiting_amount':
+        return
+    
+    try:
+        amount = float(message.text)
+        
+        # Проверяем минимальную сумму
+        if amount < 1:
+            await message.answer("❌ Минимальная сумма инвестиций - 1 RUB")
+            return
+        
+        # Проверяем, что сумма не превышает баланс
+        if amount > user_data['balance']:
+            await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:,.2f} RUB")
+            return
+        
+        # Обновляем состояние торговли
+        trading_states[user_id]['amount'] = amount
+        trading_states[user_id]['step'] = 'configuring'
+        
+        # Показываем конфигуратор сделки
+        await show_trade_configurator(message, user_id)
+        
+    except ValueError:
+        await message.answer("❌ Пожалуйста, введите корректную сумму (например: 100 или 100.50)")
+
+async def show_trade_configurator(message: Message, user_id: int):
+    """Показывает конфигуратор сделки"""
+    user_data = get_user_data(user_id)
+    trade_data = trading_states[user_id]
+    
+    # Формируем текст конфигуратора
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    # Отправляем сообщение и сохраняем его ID
+    sent_message = await message.answer(
+        config_text,
+        reply_markup=builder.as_markup()
+    )
+    trade_message_ids[user_id] = sent_message.message_id
+
+# Обработчики для конфигуратора сделки
+@router.callback_query(F.data.startswith("trade_set_direction:"))
+async def handle_direction_selection(callback: CallbackQuery):
+    """Обрабатывает выбор направления"""
+    user_id = callback.from_user.id
+```
+
+```
+    photo_to_send = FSInputFile(PHOTO_PATH)
+
+    # Формируем текст приветствия
+    welcome_text = (
+        "Добро пожаловать! 🎉\n\n"
+        "Прежде чем начать использовать нашего бота, вам необходимо ознакомиться с условиями использования.\n\n"
+        "Пожалуйста, внимательно прочитайте условия и примите их, чтобы продолжить."
+    )
+
+    # Создаем клавиатуру с помощью InlineKeyboardBuilder
+    builder = InlineKeyboardBuilder()
+
+    # Кнопка 1: URL
+    builder.button(
+        text="Прочитать условия 📜",
+        url="https://telegra.ph/Usloviya-servisa-eTron-10-23"
+    )
+    
+    # Кнопка 2: Callback (согласие)
+    builder.button(
+        text="Прочитал(а), согласен(на) ✅",
+        callback_data="accept_terms"
+    )
+
+    # Указываем, что в ряду должна быть 1 кнопка (кнопки в столбец)
+    builder.adjust(1)
+
+    # Отправляем фото
+    await message.answer_photo(
+        photo=photo_to_send,
+        caption=welcome_text,
+        reply_markup=builder.as_markup()
+    )
+
+
+@router.callback_query(F.data == "accept_terms")
+async def process_terms_accept(callback: CallbackQuery):
+    """
+    Этот хэндлер срабатывает при нажатии на кнопку "Прочитал(а), согласен(на) ✅"
+    """
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Отмечаем, что пользователь принял условия
+    user_data["accepted_terms"] = True
+    save_users_data()
+    
+    # Отвечаем на callback
+    await callback.answer("Условия приняты!", show_alert=False)
+
+    # Удаляем исходное сообщение
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logging.warning(f"Не удалось удалить сообщение: {e}")
+
+    # Показываем профиль пользователя
+    await show_user_profile(callback.message)
+
+async def show_user_profile(message: Message):
+    """Показывает профиль пользователя"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Генерируем реалистичное количество пользователей онлайн (зависит от времени)
+    current_hour = datetime.now().hour
+    if 6 <= current_hour <= 22:  # Рабочие часы
+        online_users = random.randint(1200, 1800)
+    else:  # Ночные часы
+        online_users = random.randint(800, 1200)
+    
+    # Формируем текст профиля
+    profile_text = (
+        f"👤 eToro • Профиль\n\n"
+        f"💰 Баланс: {user_data['balance']:.2f} ₽\n"
+        f"📤 На выводе: {user_data['pending_withdrawal']:.2f} ₽\n\n"
+        f"📅 На платформе: {user_data['days_on_platform']} д.\n"
+        f"✅ Верификация: {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n\n"
+        f"🆔 ID: {user_id}\n\n"
+        f"🟢 Пользователей онлайн: {online_users}"
+    )
+    
+    # Создаем клавиатуру с кнопками
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="🔼 Пополнить", callback_data="deposit"))
+    builder.add(types.InlineKeyboardButton(text="🔽 Вывести", callback_data="withdraw"))
+    builder.add(types.InlineKeyboardButton(text="🕒 История сделок", callback_data="history"))
+    builder.adjust(2, 1)  # 2 кнопки в первом ряду, 1 во втором
+    
+    # Проверяем существование фото профиля
+    if exists(PROFILE_PHOTO_PATH):
+        photo = FSInputFile(PROFILE_PHOTO_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=profile_text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            profile_text,
+            reply_markup=builder.as_markup()
+        )
+    
+    # Устанавливаем статическое меню
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=create_static_menu()
+    )
+
+# Обработчики для кнопок профиля
+@router.callback_query(F.data == "deposit")
+async def handle_deposit(callback: CallbackQuery):
+    await callback.answer("Функция пополнения в разработке", show_alert=True)
+
+@router.callback_query(F.data == "withdraw")
+async def handle_withdraw(callback: CallbackQuery):
+    """Обработчик кнопки 'Вывести' в профиле"""
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, есть ли средства для вывода
+    if user_data['balance'] <= 0:
+        await callback.answer("❌ Недостаточно средств для вывода", show_alert=True)
+        return
+    
+    # Инициализируем состояние вывода
+    WITHDRAWAL_STATES[user_id] = {
+        'step': 'amount',
+        'amount': None,
+        'requisites': None
+    }
+    
+    # Запрашиваем сумму вывода
+    await callback.message.answer(
+        f"💰 Ваш баланс: {user_data['balance']:,.2f} ₽\n\n"
+        "Введите сумму для вывода:"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "history")
+async def handle_history(callback: CallbackQuery):
+    await show_trade_history(callback)
+    await callback.answer()
+
+async def show_trade_history(callback: CallbackQuery):
+    """Показывает историю сделок пользователя"""
+    user_id = callback.from_user.id
+    trade_history = load_trade_history()
+    
+    if str(user_id) not in trade_history or not trade_history[str(user_id)]:
+        # История пуста
+        empty_text = (
+            "📊 История сделок\n\n"
+            "📝 У вас пока нет совершенных сделок.\n"
+            "Начните торговать, чтобы увидеть историю!"
+        )
+        
+        builder = InlineKeyboardBuilder()
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+        builder.adjust(1)
+        
+        try:
+            await callback.message.edit_caption(
+                caption=empty_text,
+                reply_markup=builder.as_markup()
+            )
+        except Exception as e:
+            await callback.message.answer(
+                empty_text,
+                reply_markup=builder.as_markup()
+            )
+        return
+    
+    # Получаем последние 10 сделок
+    user_trades = trade_history[str(user_id)][-10:]
+    user_trades.reverse()  # Показываем от новых к старым
+    
+    # Формируем текст истории
+    history_text = "📊 История сделок\n\n"
+    
+    for trade in user_trades:
+        # Форматируем дату
+        trade_date = datetime.fromisoformat(trade['timestamp']).strftime("%d.%m.%Y %H:%M")
+        
+        # Определяем эмодзи результата
+        if trade['result'] == "Победа":
+            result_emoji = "🎉"
+            result_text = f"+{trade['win_amount']:,.2f} RUB"
+        else:
+            result_emoji = "😥"
+            result_text = f"-{trade['amount']:,.2f} RUB"
+        
+        # Определяем эмодзи направления
+        direction_emoji = "⬆️" if "Вверх" in trade['direction'] else "⬇️"
+        
+        # Добавляем сделку в историю
+        history_text += (
+            f"{result_emoji} <b>#{trade['id']}</b> • {trade_date}\n"
+            f"📊 {trade['asset']}\n"
+            f"{direction_emoji} {trade['direction']} • {trade['amount']:,.2f} RUB • {trade['time_sec']}\n"
+            f"💰 {result_text}\n\n"
+        )
+    
+    # Добавляем статистику
+    total_trades = len(trade_history[str(user_id)])
+    wins = len([t for t in trade_history[str(user_id)] if t['result'] == "Победа"])
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+    
+    history_text += f"📈 Статистика: {wins}/{total_trades} побед ({win_rate:.1f}%)"
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        await callback.message.answer(
+            history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+
+@router.callback_query(F.data == "back_to_profile")
+async def handle_back_to_profile(callback: CallbackQuery):
+    """Возвращает к профилю пользователя"""
+    await show_user_profile(callback.message)
+    await callback.answer()
+
+# Обработчики для статического меню
+@router.message(F.text == "👤 Профиль")
+async def handle_profile_button(message: Message):
+    await show_user_profile(message)
+
+@router.message(F.text == "📈 Торговля")
+async def handle_trading_button(message: Message):
+    await show_trading_categories(message)
+
+@router.message(F.text == "🆘 Поддержка")
+async def handle_support_button(message: Message):
+    await message.answer("Для получения поддержки обратитесь к администратору")
+
+@router.message(F.text == "ℹ️ Информация")
+async def handle_info_button(message: Message):
+    await message.answer("eToro - ведущая платформа для торговли и инвестиций")
+
+# Обработчик ввода суммы инвестиций
+@router.message(F.text.regexp(r'^\d+(\.\d+)?$'))
+async def handle_investment_amount(message: Message):
+    """Обрабатывает ввод суммы инвестиций"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, находится ли пользователь в состоянии торговли
+    if user_id not in trading_states or trading_states[user_id]['step'] != 'waiting_amount':
+        return
+    
+    try:
+        amount = float(message.text)
+        
+        # Проверяем минимальную сумму
+        if amount < 1:
+            await message.answer("❌ Минимальная сумма инвестиций - 1 RUB")
+            return
+        
+        # Проверяем, что сумма не превышает баланс
+        if amount > user_data['balance']:
+            await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:,.2f} RUB")
+            return
+        
+        # Обновляем состояние торговли
+        trading_states[user_id]['amount'] = amount
+        trading_states[user_id]['step'] = 'configuring'
+        
+        # Показываем конфигуратор сделки
+        await show_trade_configurator(message, user_id)
+        
+    except ValueError:
+        await message.answer("❌ Пожалуйста, введите корректную сумму (например: 100 или 100.50)")
+
+async def show_trade_configurator(message: Message, user_id: int):
+    """Показывает конфигуратор сделки"""
+    user_data = get_user_data(user_id)
+    trade_data = trading_states[user_id]
+    
+    # Формируем текст конфигуратора
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    # Отправляем сообщение и сохраняем его ID
+    sent_message = await message.answer(
+        config_text,
+        reply_markup=builder.as_markup()
+    )
+    trade_message_ids[user_id] = sent_message.message_id
+
+# Обработчики для конфигуратора сделки
+@router.callback_query(F.data.startswith("trade_set_direction:"))
+async def handle_direction_selection(callback: CallbackQuery):
+    """Обрабатывает выбор направления"""
+    user_id = callback.from_user.id
+```
+
+```
+    photo_to_send = FSInputFile(PHOTO_PATH)
+
+    # Формируем текст приветствия
+    welcome_text = (
+        "Добро пожаловать! 🎉\n\n"
+        "Прежде чем начать использовать нашего бота, вам необходимо ознакомиться с условиями использования.\n\n"
+        "Пожалуйста, внимательно прочитайте условия и примите их, чтобы продолжить."
+    )
+
+    # Создаем клавиатуру с помощью InlineKeyboardBuilder
+    builder = InlineKeyboardBuilder()
+
+    # Кнопка 1: URL
+    builder.button(
+        text="Прочитать условия 📜",
+        url="https://telegra.ph/Usloviya-servisa-eTron-10-23"
+    )
+    
+    # Кнопка 2: Callback (согласие)
+    builder.button(
+        text="Прочитал(а), согласен(на) ✅",
+        callback_data="accept_terms"
+    )
+
+    # Указываем, что в ряду должна быть 1 кнопка (кнопки в столбец)
+    builder.adjust(1)
+
+    # Отправляем фото
+    await message.answer_photo(
+        photo=photo_to_send,
+        caption=welcome_text,
+        reply_markup=builder.as_markup()
+    )
+
+
+@router.callback_query(F.data == "accept_terms")
+async def process_terms_accept(callback: CallbackQuery):
+    """
+    Этот хэндлер срабатывает при нажатии на кнопку "Прочитал(а), согласен(на) ✅"
+    """
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Отмечаем, что пользователь принял условия
+    user_data["accepted_terms"] = True
+    save_users_data()
+    
+    # Отвечаем на callback
+    await callback.answer("Условия приняты!", show_alert=False)
+
+    # Удаляем исходное сообщение
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logging.warning(f"Не удалось удалить сообщение: {e}")
+
+    # Показываем профиль пользователя
+    await show_user_profile(callback.message)
+
+async def show_user_profile(message: Message):
+    """Показывает профиль пользователя"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Генерируем реалистичное количество пользователей онлайн (зависит от времени)
+    current_hour = datetime.now().hour
+    if 6 <= current_hour <= 22:  # Рабочие часы
+        online_users = random.randint(1200, 1800)
+    else:  # Ночные часы
+        online_users = random.randint(800, 1200)
+    
+    # Формируем текст профиля
+    profile_text = (
+        f"👤 eToro • Профиль\n\n"
+        f"💰 Баланс: {user_data['balance']:.2f} ₽\n"
+        f"📤 На выводе: {user_data['pending_withdrawal']:.2f} ₽\n\n"
+        f"📅 На платформе: {user_data['days_on_platform']} д.\n"
+        f"✅ Верификация: {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n\n"
+        f"🆔 ID: {user_id}\n\n"
+        f"🟢 Пользователей онлайн: {online_users}"
+    )
+    
+    # Создаем клавиатуру с кнопками
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="🔼 Пополнить", callback_data="deposit"))
+    builder.add(types.InlineKeyboardButton(text="🔽 Вывести", callback_data="withdraw"))
+    builder.add(types.InlineKeyboardButton(text="🕒 История сделок", callback_data="history"))
+    builder.adjust(2, 1)  # 2 кнопки в первом ряду, 1 во втором
+    
+    # Проверяем существование фото профиля
+    if exists(PROFILE_PHOTO_PATH):
+        photo = FSInputFile(PROFILE_PHOTO_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=profile_text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            profile_text,
+            reply_markup=builder.as_markup()
+        )
+    
+    # Устанавливаем статическое меню
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=create_static_menu()
+    )
+
+# Обработчики для кнопок профиля
+@router.callback_query(F.data == "deposit")
+async def handle_deposit(callback: CallbackQuery):
+    await callback.answer("Функция пополнения в разработке", show_alert=True)
+
+@router.callback_query(F.data == "withdraw")
+async def handle_withdraw(callback: CallbackQuery):
+    """Обработчик кнопки 'Вывести' в профиле"""
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, есть ли средства для вывода
+    if user_data['balance'] <= 0:
+        await callback.answer("❌ Недостаточно средств для вывода", show_alert=True)
+        return
+    
+    # Инициализируем состояние вывода
+    WITHDRAWAL_STATES[user_id] = {
+        'step': 'amount',
+        'amount': None,
+        'requisites': None
+    }
+    
+    # Запрашиваем сумму вывода
+    await callback.message.answer(
+        f"💰 Ваш баланс: {user_data['balance']:,.2f} ₽\n\n"
+        "Введите сумму для вывода:"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "history")
+async def handle_history(callback: CallbackQuery):
+    await show_trade_history(callback)
+    await callback.answer()
+
+async def show_trade_history(callback: CallbackQuery):
+    """Показывает историю сделок пользователя"""
+    user_id = callback.from_user.id
+    trade_history = load_trade_history()
+    
+    if str(user_id) not in trade_history or not trade_history[str(user_id)]:
+        # История пуста
+        empty_text = (
+            "📊 История сделок\n\n"
+            "📝 У вас пока нет совершенных сделок.\n"
+            "Начните торговать, чтобы увидеть историю!"
+        )
+        
+        builder = InlineKeyboardBuilder()
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+        builder.adjust(1)
+        
+        try:
+            await callback.message.edit_caption(
+                caption=empty_text,
+                reply_markup=builder.as_markup()
+            )
+        except Exception as e:
+            await callback.message.answer(
+                empty_text,
+                reply_markup=builder.as_markup()
+            )
+        return
+    
+    # Получаем последние 10 сделок
+    user_trades = trade_history[str(user_id)][-10:]
+    user_trades.reverse()  # Показываем от новых к старым
+    
+    # Формируем текст истории
+    history_text = "📊 История сделок\n\n"
+    
+    for trade in user_trades:
+        # Форматируем дату
+        trade_date = datetime.fromisoformat(trade['timestamp']).strftime("%d.%m.%Y %H:%M")
+        
+        # Определяем эмодзи результата
+        if trade['result'] == "Победа":
+            result_emoji = "🎉"
+            result_text = f"+{trade['win_amount']:,.2f} RUB"
+        else:
+            result_emoji = "😥"
+            result_text = f"-{trade['amount']:,.2f} RUB"
+        
+        # Определяем эмодзи направления
+        direction_emoji = "⬆️" if "Вверх" in trade['direction'] else "⬇️"
+        
+        # Добавляем сделку в историю
+        history_text += (
+            f"{result_emoji} <b>#{trade['id']}</b> • {trade_date}\n"
+            f"📊 {trade['asset']}\n"
+            f"{direction_emoji} {trade['direction']} • {trade['amount']:,.2f} RUB • {trade['time_sec']}\n"
+            f"💰 {result_text}\n\n"
+        )
+    
+    # Добавляем статистику
+    total_trades = len(trade_history[str(user_id)])
+    wins = len([t for t in trade_history[str(user_id)] if t['result'] == "Победа"])
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+    
+    history_text += f"📈 Статистика: {wins}/{total_trades} побед ({win_rate:.1f}%)"
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        await callback.message.answer(
+            history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+
+@router.callback_query(F.data == "back_to_profile")
+async def handle_back_to_profile(callback: CallbackQuery):
+    """Возвращает к профилю пользователя"""
+    await show_user_profile(callback.message)
+    await callback.answer()
+
+# Обработчики для статического меню
+@router.message(F.text == "👤 Профиль")
+async def handle_profile_button(message: Message):
+    await show_user_profile(message)
+
+@router.message(F.text == "📈 Торговля")
+async def handle_trading_button(message: Message):
+    await show_trading_categories(message)
+
+@router.message(F.text == "🆘 Поддержка")
+async def handle_support_button(message: Message):
+    await message.answer("Для получения поддержки обратитесь к администратору")
+
+@router.message(F.text == "ℹ️ Информация")
+async def handle_info_button(message: Message):
+    await message.answer("eToro - ведущая платформа для торговли и инвестиций")
+
+# Обработчик ввода суммы инвестиций
+@router.message(F.text.regexp(r'^\d+(\.\d+)?$'))
+async def handle_investment_amount(message: Message):
+    """Обрабатывает ввод суммы инвестиций"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, находится ли пользователь в состоянии торговли
+    if user_id not in trading_states or trading_states[user_id]['step'] != 'waiting_amount':
+        return
+    
+    try:
+        amount = float(message.text)
+        
+        # Проверяем минимальную сумму
+        if amount < 1:
+            await message.answer("❌ Минимальная сумма инвестиций - 1 RUB")
+            return
+        
+        # Проверяем, что сумма не превышает баланс
+        if amount > user_data['balance']:
+            await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:,.2f} RUB")
+            return
+        
+        # Обновляем состояние торговли
+        trading_states[user_id]['amount'] = amount
+        trading_states[user_id]['step'] = 'configuring'
+        
+        # Показываем конфигуратор сделки
+        await show_trade_configurator(message, user_id)
+        
+    except ValueError:
+        await message.answer("❌ Пожалуйста, введите корректную сумму (например: 100 или 100.50)")
+
+async def show_trade_configurator(message: Message, user_id: int):
+    """Показывает конфигуратор сделки"""
+    user_data = get_user_data(user_id)
+    trade_data = trading_states[user_id]
+    
+    # Формируем текст конфигуратора
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    # Отправляем сообщение и сохраняем его ID
+    sent_message = await message.answer(
+        config_text,
+        reply_markup=builder.as_markup()
+    )
+    trade_message_ids[user_id] = sent_message.message_id
+
+# Обработчики для конфигуратора сделки
+@router.callback_query(F.data.startswith("trade_set_direction:"))
+async def handle_direction_selection(callback: CallbackQuery):
+    """Обрабатывает выбор направления"""
+    user_id = callback.from_user.id
+```
+
+```
+    photo_to_send = FSInputFile(PHOTO_PATH)
+
+    # Формируем текст приветствия
+    welcome_text = (
+        "Добро пожаловать! 🎉\n\n"
+        "Прежде чем начать использовать нашего бота, вам необходимо ознакомиться с условиями использования.\n\n"
+        "Пожалуйста, внимательно прочитайте условия и примите их, чтобы продолжить."
+    )
+
+    # Создаем клавиатуру с помощью InlineKeyboardBuilder
+    builder = InlineKeyboardBuilder()
+
+    # Кнопка 1: URL
+    builder.button(
+        text="Прочитать условия 📜",
+        url="https://telegra.ph/Usloviya-servisa-eTron-10-23"
+    )
+    
+    # Кнопка 2: Callback (согласие)
+    builder.button(
+        text="Прочитал(а), согласен(на) ✅",
+        callback_data="accept_terms"
+    )
+
+    # Указываем, что в ряду должна быть 1 кнопка (кнопки в столбец)
+    builder.adjust(1)
+
+    # Отправляем фото
+    await message.answer_photo(
+        photo=photo_to_send,
+        caption=welcome_text,
+        reply_markup=builder.as_markup()
+    )
+
+
+@router.callback_query(F.data == "accept_terms")
+async def process_terms_accept(callback: CallbackQuery):
+    """
+    Этот хэндлер срабатывает при нажатии на кнопку "Прочитал(а), согласен(на) ✅"
+    """
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Отмечаем, что пользователь принял условия
+    user_data["accepted_terms"] = True
+    save_users_data()
+    
+    # Отвечаем на callback
+    await callback.answer("Условия приняты!", show_alert=False)
+
+    # Удаляем исходное сообщение
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logging.warning(f"Не удалось удалить сообщение: {e}")
+
+    # Показываем профиль пользователя
+    await show_user_profile(callback.message)
+
+async def show_user_profile(message: Message):
+    """Показывает профиль пользователя"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Генерируем реалистичное количество пользователей онлайн (зависит от времени)
+    current_hour = datetime.now().hour
+    if 6 <= current_hour <= 22:  # Рабочие часы
+        online_users = random.randint(1200, 1800)
+    else:  # Ночные часы
+        online_users = random.randint(800, 1200)
+    
+    # Формируем текст профиля
+    profile_text = (
+        f"👤 eToro • Профиль\n\n"
+        f"💰 Баланс: {user_data['balance']:.2f} ₽\n"
+        f"📤 На выводе: {user_data['pending_withdrawal']:.2f} ₽\n\n"
+        f"📅 На платформе: {user_data['days_on_platform']} д.\n"
+        f"✅ Верификация: {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n\n"
+        f"🆔 ID: {user_id}\n\n"
+        f"🟢 Пользователей онлайн: {online_users}"
+    )
+    
+    # Создаем клавиатуру с кнопками
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="🔼 Пополнить", callback_data="deposit"))
+    builder.add(types.InlineKeyboardButton(text="🔽 Вывести", callback_data="withdraw"))
+    builder.add(types.InlineKeyboardButton(text="🕒 История сделок", callback_data="history"))
+    builder.adjust(2, 1)  # 2 кнопки в первом ряду, 1 во втором
+    
+    # Проверяем существование фото профиля
+    if exists(PROFILE_PHOTO_PATH):
+        photo = FSInputFile(PROFILE_PHOTO_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=profile_text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            profile_text,
+            reply_markup=builder.as_markup()
+        )
+    
+    # Устанавливаем статическое меню
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=create_static_menu()
+    )
+
+# Обработчики для кнопок профиля
+@router.callback_query(F.data == "deposit")
+async def handle_deposit(callback: CallbackQuery):
+    await callback.answer("Функция пополнения в разработке", show_alert=True)
+
+@router.callback_query(F.data == "withdraw")
+async def handle_withdraw(callback: CallbackQuery):
+    """Обработчик кнопки 'Вывести' в профиле"""
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, есть ли средства для вывода
+    if user_data['balance'] <= 0:
+        await callback.answer("❌ Недостаточно средств для вывода", show_alert=True)
+        return
+    
+    # Инициализируем состояние вывода
+    WITHDRAWAL_STATES[user_id] = {
+        'step': 'amount',
+        'amount': None,
+        'requisites': None
+    }
+    
+    # Запрашиваем сумму вывода
+    await callback.message.answer(
+        f"💰 Ваш баланс: {user_data['balance']:,.2f} ₽\n\n"
+        "Введите сумму для вывода:"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "history")
+async def handle_history(callback: CallbackQuery):
+    await show_trade_history(callback)
+    await callback.answer()
+
+async def show_trade_history(callback: CallbackQuery):
+    """Показывает историю сделок пользователя"""
+    user_id = callback.from_user.id
+    trade_history = load_trade_history()
+    
+    if str(user_id) not in trade_history or not trade_history[str(user_id)]:
+        # История пуста
+        empty_text = (
+            "📊 История сделок\n\n"
+            "📝 У вас пока нет совершенных сделок.\n"
+            "Начните торговать, чтобы увидеть историю!"
+        )
+        
+        builder = InlineKeyboardBuilder()
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+        builder.adjust(1)
+        
+        try:
+            await callback.message.edit_caption(
+                caption=empty_text,
+                reply_markup=builder.as_markup()
+            )
+        except Exception as e:
+            await callback.message.answer(
+                empty_text,
+                reply_markup=builder.as_markup()
+            )
+        return
+    
+    # Получаем последние 10 сделок
+    user_trades = trade_history[str(user_id)][-10:]
+    user_trades.reverse()  # Показываем от новых к старым
+    
+    # Формируем текст истории
+    history_text = "📊 История сделок\n\n"
+    
+    for trade in user_trades:
+        # Форматируем дату
+        trade_date = datetime.fromisoformat(trade['timestamp']).strftime("%d.%m.%Y %H:%M")
+        
+        # Определяем эмодзи результата
+        if trade['result'] == "Победа":
+            result_emoji = "🎉"
+            result_text = f"+{trade['win_amount']:,.2f} RUB"
+        else:
+            result_emoji = "😥"
+            result_text = f"-{trade['amount']:,.2f} RUB"
+        
+        # Определяем эмодзи направления
+        direction_emoji = "⬆️" if "Вверх" in trade['direction'] else "⬇️"
+        
+        # Добавляем сделку в историю
+        history_text += (
+            f"{result_emoji} <b>#{trade['id']}</b> • {trade_date}\n"
+            f"📊 {trade['asset']}\n"
+            f"{direction_emoji} {trade['direction']} • {trade['amount']:,.2f} RUB • {trade['time_sec']}\n"
+            f"💰 {result_text}\n\n"
+        )
+    
+    # Добавляем статистику
+    total_trades = len(trade_history[str(user_id)])
+    wins = len([t for t in trade_history[str(user_id)] if t['result'] == "Победа"])
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+    
+    history_text += f"📈 Статистика: {wins}/{total_trades} побед ({win_rate:.1f}%)"
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к профилю", callback_data="back_to_profile"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_caption(
+            caption=history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        await callback.message.answer(
+            history_text,
+            reply_markup=builder.as_markup(),
+            parse_mode=ParseMode.HTML
+        )
+
+@router.callback_query(F.data == "back_to_profile")
+async def handle_back_to_profile(callback: CallbackQuery):
+    """Возвращает к профилю пользователя"""
+    await show_user_profile(callback.message)
+    await callback.answer()
+
+# Обработчики для статического меню
+@router.message(F.text == "👤 Профиль")
+async def handle_profile_button(message: Message):
+    await show_user_profile(message)
+
+@router.message(F.text == "📈 Торговля")
+async def handle_trading_button(message: Message):
+    await show_trading_categories(message)
+
+@router.message(F.text == "🆘 Поддержка")
+async def handle_support_button(message: Message):
+    await message.answer("Для получения поддержки обратитесь к администратору")
+
+@router.message(F.text == "ℹ️ Информация")
+async def handle_info_button(message: Message):
+    await message.answer("eToro - ведущая платформа для торговли и инвестиций")
+
+# Обработчик ввода суммы инвестиций
+@router.message(F.text.regexp(r'^\d+(\.\d+)?$'))
+async def handle_investment_amount(message: Message):
+    """Обрабатывает ввод суммы инвестиций"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, находится ли пользователь в состоянии торговли
+    if user_id not in trading_states or trading_states[user_id]['step'] != 'waiting_amount':
+        return
+    
+    try:
+        amount = float(message.text)
+        
+        # Проверяем минимальную сумму
+        if amount < 1:
+            await message.answer("❌ Минимальная сумма инвестиций - 1 RUB")
+            return
+        
+        # Проверяем, что сумма не превышает баланс
+        if amount > user_data['balance']:
+            await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:,.2f} RUB")
+            return
+        
+        # Обновляем состояние торговли
+        trading_states[user_id]['amount'] = amount
+        trading_states[user_id]['step'] = 'configuring'
+        
+        # Показываем конфигуратор сделки
+        await show_trade_configurator(message, user_id)
+        
+    except ValueError:
+        await message.answer("❌ Пожалуйста, введите корректную сумму (например: 100 или 100.50)")
+
+async def show_trade_configurator(message: Message, user_id: int):
+    """Показывает конфигуратор сделки"""
+    user_data = get_user_data(user_id)
+    trade_data = trading_states[user_id]
+    
+    # Формируем текст конфигуратора
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    # Отправляем сообщение и сохраняем его ID
+    sent_message = await message.answer(
+        config_text,
+        reply_markup=builder.as_markup()
+    )
+    trade_message_ids[user_id] = sent_message.message_id
+
+# Обработчики для конфигуратора сделки
+@router.callback_query(F.data.startswith("trade_set_direction:"))
+async def handle_direction_selection(callback: CallbackQuery):
+    """Обрабатывает выбор направления"""
+    user_id = callback.from_user.id
+```
+
+```
+    photo_to_send = FSInputFile(PHOTO_PATH)
+
+    # Формируем текст приветствия
+    welcome_text = (
+        "Добро пожаловать! 🎉\n\n"
+        "Прежде чем начать использовать нашего бота, вам необходимо ознакомиться с условиями использования.\n\n"
+        "Пожалуйста, внимательно прочитайте условия и примите их, чтобы продолжить."
+    )
+
+    # Создаем клавиатуру с помощью InlineKeyboardBuilder
+    builder = InlineKeyboardBuilder()
+
+    # Кнопка 1: URL
+    builder.button(
+        text="Прочитать условия 📜",
+        url="https://telegra.ph/Usloviya-servisa-eTron-10-23"
+    )
+    
+    # Кнопка 2: Callback (согласие)
+    builder.button(
+        text="Прочитал(а), согласен(на) ✅",
+        callback_data="accept_terms"
+    )
+
+    # Указываем, что в ряду должна быть 1 кнопка (кнопки в столбец)
+    builder.adjust(1)
+
+    # Отправляем фото
+    await message.answer_photo(
+        photo=photo_to_send,
+        caption=welcome_text,
+        reply_markup=builder.as_markup()
+    )
+
+
+@router.callback_query(F.data == "accept_terms")
+async def process_terms_accept(callback: CallbackQuery):
+    """
+    Этот хэндлер срабатывает при нажатии на кнопку "Прочитал(а), согласен(на) ✅"
+    """
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Отмечаем, что пользователь принял условия
+    user_data["accepted_terms"] = True
+    save_users_data()
+    
+    # Отвечаем на callback
+    await callback.answer("Условия приняты!", show_alert=False)
+
+    # Удаляем исходное сообщение
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logging.warning(f"Не удалось удалить сообщение: {e}")
+
+    # Показываем профиль пользователя
+    await show_user_profile(callback.message)
+
+async def show_user_profile(message: Message):
+    """Показывает профиль пользователя"""
+    user_id = message.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Генерируем реалистичное количество пользователей онлайн (зависит от времени)
+    current_hour = datetime.now().hour
+    if 6 <= current_hour <= 22:  # Рабочие часы
+        online_users = random.randint(1200, 1800)
+    else:  # Ночные часы
+        online_users = random.randint(800, 1200)
+    
+    # Формируем текст профиля
+    profile_text = (
+        f"👤 eToro • Профиль\n\n"
+        f"💰 Баланс: {user_data['balance']:.2f} ₽\n"
+        f"📤 На выводе: {user_data['pending_withdrawal']:.2f} ₽\n\n"
+        f"📅 На платформе: {user_data['days_on_platform']} д.\n"
+        f"✅ Верификация: {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n\n"
+        f"🆔 ID: {user_id}\n\n"
+        f"🟢 Пользователей онлайн: {online_users}"
+    )
+    
+    # Создаем клавиатуру с кнопками
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="🔼 Пополнить", callback_data="deposit"))
+    builder.add(types.InlineKeyboardButton(text="🔽 Вывести", callback_data="withdraw"))
+    builder.add(types.InlineKeyboardButton(text="🕒 История сделок", callback_data="history"))
+    builder.adjust(2, 1)  # 2 кнопки в первом ряду, 1 во втором
+    
+    # Проверяем существование фото профиля
+    if exists(PROFILE_PHOTO_PATH):
+        photo = FSInputFile(PROFILE_PHOTO_PATH)
+        await message.answer_photo(
+            photo=photo,
+            caption=profile_text,
+            reply_markup=builder.as_markup()
+        )
+    else:
+        await message.answer(
+            profile_text,
+            reply_markup=builder.as_markup()
+        )
+    
+    # Устанавливаем статическое меню
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=create_static_menu()
+    )
+
+# Обработчики для кнопок профиля
+@router.callback_query(F.data == "deposit")
+async def handle_deposit(callback: CallbackQuery):
+    await callback.answer("Функция пополнения в разработке", show_alert=True)
+
+@router.callback_query(F.data == "withdraw")
+async def handle_withdraw(callback: CallbackQuery):
+    """Обработчик кнопки 'Вывести' в профиле"""
+    user_id = callback.from_user.id
+    user_data = get_user_data(user_id)
+    
+    # Проверяем, есть ли средства для вывода
+    if user_data['balance'] <= 0:
+        await callback.answer("❌ Недостаточно средств для вывода", show_alert=True)
+        return
+    
+    # Инициализируем состояние вывода
+    WITHDRAWAL_STATES[user_id] = {
+        'step': 'amount',
+        'amount': None,
+        'requisites': None
+    }
+    
+    # Запрашиваем сумму вывода
+    await callback.message.answer(
+        f"💰 Ваш баланс: {user_data['balance']:,.2f} ₽\n\n"
+        "Введите сумму для вывода:"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "history")
+async def handle_history(callback: CallbackQuery):
+    await show_trade_history(callback)
+    await callback.answer()
+
+async def show_trade_history(callback: CallbackQuery):
+    """Показывает историю сделок пользователя"""
+    user_id = callback.from_user.id
+    direction = callback.data.split(":")[1]
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Обновляем направление
+    trading_states[user_id]['direction'] = "⬆️ Вверх" if direction == "up" else "⬇️ Вниз"
+    
+    # Обновляем сообщение
+    await update_trade_configurator(callback, user_id)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("trade_set_time:"))
+async def handle_time_selection(callback: CallbackQuery):
+    """Обрабатывает выбор времени"""
+    user_id = callback.from_user.id
+    time_sec = callback.data.split(":")[1]
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Обновляем время
+    trading_states[user_id]['time_sec'] = f"{time_sec} сек"
+    
+    # Обновляем сообщение
+    await update_trade_configurator(callback, user_id)
+    await callback.answer()
+
+async def update_trade_configurator(callback: CallbackQuery, user_id: int):
+    """Обновляет конфигуратор сделки"""
+    trade_data = trading_states[user_id]
+    
+    # Формируем обновленный текст
+    config_text = (
+        "⚙️ Настройка сделки\n\n"
+        f"💰 Сумма: {trade_data['amount']:,.2f} RUB\n\n"
+        f"↕️ Направление актива: {trade_data.get('direction', '(не выбрано)')}\n\n"
+        f"⏱️ Время ставки: {trade_data.get('time_sec', '(не выбрано)')}\n"
+        
+    )
+    
+    # Создаем клавиатуру
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
+    builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
+    builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
+    builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
+    builder.adjust(2, 3, 1, 1)
+    
+    try:
+        await callback.message.edit_text(
+            config_text,
+            reply_markup=builder.as_markup()
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось обновить конфигуратор: {e}")
+
+@router.callback_query(F.data == "trade_reset_to_amount")
+async def handle_reset_to_amount(callback: CallbackQuery):
+    """Возвращает к вводу суммы"""
+    user_id = callback.from_user.id
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    # Сбрасываем состояние
+    trading_states[user_id]['step'] = 'waiting_amount'
+    trading_states[user_id]['amount'] = None
+    trading_states[user_id]['direction'] = None
+    trading_states[user_id]['time_sec'] = None
+    
+    user_data = get_user_data(user_id)
+    
+    # Возвращаем к вводу суммы
+    reset_text = f"Ваш баланс: {user_data['balance']:,.2f} RUB\n\n🌐 Введите сумму, которую хотите инвестировать:"
+    
+    try:
+        await callback.message.edit_text(
+            reset_text,
+            reply_markup=None
+        )
+    except Exception as e:
+        logging.warning(f"Не удалось сбросить к вводу суммы: {e}")
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "trade_create_deal")
+async def handle_create_deal(callback: CallbackQuery):
+    """Создает сделку"""
+    user_id = callback.from_user.id
+    
+    if user_id not in trading_states:
+        await callback.answer("❌ Сессия торговли истекла", show_alert=True)
+        return
+    
+    trade_data = trading_states[user_id]
+    
+    # Проверяем, что все выбрано
+    if not trade_data.get('direction') or not trade_data.get('time_sec'):
+        await callback.answer("⚠️ Пожалуйста, выберите направление и время ставки!", show_alert=True)
+        return
+    
+    # Создаем сделку
+    await execute_trade(callback, user_id)
+    await callback.answer("✅ Сделка создана!")
+
+async def execute_trade(callback: CallbackQuery, user_id: int):
+    """Выполняет сделку с реальным таймером и прогресс-баром"""
+    trade_data = trading_states[user_id]
+    user_data = get_user_data(user_id)
+    
+    # Получаем время в секундах
+    time_seconds = int(trade_data['time_sec'].split()[0])
+    
+    # Запускаем таймер с обновлением каждую секунду
+    await run_trade_timer(callback, user_id, time_seconds)
+    
+    # Определяем результат (пока случайно)
+    is_win = random.choice([True, False])
+    
+    if is_win:
+        # Победа - удваиваем сумму
+        win_amount = trade_data['amount']
+        new_balance = user_data['balance'] + win_amount
+        user_data['balance'] = new_balance
+        save_users_data()
+        
+        # Сохраняем в историю
+        add_trade_to_history(user_id, trade_data, "Победа", win_amount, new_balance)
+        
+        result_text = (
+            f"🎉 Победа! Ваш выигрыш +{win_amount:,.2f} RUB.\n\n"
+            f"Ваш новый баланс: {new_balance:,.2f} RUB."
+        )
+    else:
+        # Поражение - теряем сумму
+        loss_amount = trade_data['amount']
+        new_balance = user_data['balance'] - loss_amount
+        user_data['balance'] = max(0, new_balance)  # Не может быть отрицательным
+        save_users_data()
+        
+        # Сохраняем в историю
+        add_trade_to_history(user_id, trade_data, "Поражение", 0, user_data['balance'])
+        
+        result_text = (
+            f"😥 Поражение. Вы потеряли -{loss_amount:,.2f} RUB.\n\n"
+            f"Ваш новый баланс: {user_data['balance']:,.2f} RUB."
+        )
+    
+    # Отправляем результат
+    await callback.message.answer(result_text)
+    
+    # Очищаем состояние
+    if user_id in trading_states:
+        del trading_states[user_id]
+    if user_id in trade_message_ids:
+        del trade_message_ids[user_id]
+
+async def run_trade_timer(callback: CallbackQuery, user_id: int, total_seconds: int):
+    """Запускает таймер с прогресс-баром"""
+    trade_data = trading_states[user_id]
+    
+    for remaining in range(total_seconds, 0, -1):
+        # Создаем прогресс-бар
+        progress_bar = create_progress_bar(remaining, total_seconds)
+        
+        # Формируем текст с таймером
+        timer_text = (
+            f"⏳ Сделка открыта! Ждем результат...\n\n"
+            f"📊 Актив: {trade_data['asset_name']}\n"
+            f"Направление: {trade_data['direction']}\n"
+            f"Сумма: {trade_data['amount']:,.2f} RUB\n"
+            f"Время: {remaining} сек\n\n"
+            f"{progress_bar}"
+        )
+        
+        try:
+            await callback.message.edit_text(
+                timer_text,
+                reply_markup=None
+            )
+        except Exception as e:
+            logging.warning(f"Не удалось обновить таймер: {e}")
+            break
+        
+        # Ждем 1 секунду
+        await asyncio.sleep(1)
+    
+    # Финальное обновление - показываем, что время истекло
+    final_text = (
+        f"⏰ Время истекло!\n\n"
+        f

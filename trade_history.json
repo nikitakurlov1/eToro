@@ -1,0 +1,120 @@
+{
+  "844012884": [
+    {
+      "id": 1,
+      "timestamp": "2025-10-23T19:59:41.288858",
+      "asset": "Ł Litecoin (LTC)",
+      "direction": "⬆️ Вверх",
+      "amount": 100.0,
+      "time_sec": "10 сек",
+      "result": "Поражение",
+      "win_amount": 0,
+      "new_balance": 28452.71
+    },
+    {
+      "id": 2,
+      "timestamp": "2025-10-23T20:05:05.401480",
+      "asset": "◊ Stellar (XLM)",
+      "direction": "⬆️ Вверх",
+      "amount": 100.0,
+      "time_sec": "10 сек",
+      "result": "Победа",
+      "win_amount": 100.0,
+      "new_balance": 28552.71
+    },
+    {
+      "id": 3,
+      "timestamp": "2025-10-23T21:18:05.195151",
+      "asset": "Ł Litecoin (LTC)",
+      "direction": "⬆️ Вверх",
+      "amount": 100.0,
+      "time_sec": "10 сек",
+      "result": "Победа",
+      "win_amount": 100.0,
+      "new_balance": 28652.71
+    },
+    {
+      "id": 4,
+      "timestamp": "2025-10-25T21:51:02.683727",
+      "asset": "₿ Bitcoin Cash (BCH)",
+      "direction": "⬆️ Вверх",
+      "amount": 1000.0,
+      "time_sec": "10 сек",
+      "leverage": 10.0,
+      "result": "Победа",
+      "win_amount": 20000.0,
+      "new_balance": 21000.0
+    }
+  ],
+  "6935385024": [
+    {
+      "id": 1,
+      "timestamp": "2025-10-23T22:37:21.580213",
+      "asset": "◊ Stellar (XLM)",
+      "direction": "⬆️ Вверх",
+      "amount": 100.0,
+      "time_sec": "10 сек",
+      "result": "Поражение",
+      "win_amount": 0,
+      "new_balance": 0
+    },
+    {
+      "id": 2,
+      "timestamp": "2025-10-23T22:38:54.566734",
+      "asset": "₿ Bitcoin (BTC)",
+      "direction": "⬆️ Вверх",
+      "amount": 1000.0,
+      "time_sec": "10 сек",
+      "result": "Поражение",
+      "win_amount": 0,
+      "new_balance": 0
+    },
+    {
+      "id": 3,
+      "timestamp": "2025-10-23T22:45:10.391732",
+      "asset": "◊ Stellar (XLM)",
+      "direction": "⬆️ Вверх",
+      "amount": 1000.0,
+      "time_sec": "10 сек",
+      "result": "Поражение",
+      "win_amount": 0,
+      "new_balance": 0.0
+    },
+    {
+      "id": 4,
+      "timestamp": "2025-10-25T21:34:21.621655",
+      "asset": "🏦 Сбербанк (SBER)",
+      "direction": "⬆️ Вверх",
+      "amount": 100.0,
+      "time_sec": "10 сек",
+      "leverage": 5.0,
+      "result": "Поражение",
+      "win_amount": 0,
+      "new_balance": 0
+    }
+  ],
+  "885445427": [
+    {
+      "id": 1,
+      "timestamp": "2025-10-25T20:56:14.324575",
+      "asset": "◊ Cardano (ADA)",
+      "direction": "⬆️ Вверх",
+      "amount": 100.0,
+      "time_sec": "10 сек",
+      "result": "Победа",
+      "win_amount": 300.0,
+      "new_balance": 1300.0
+    },
+    {
+      "id": 2,
+      "timestamp": "2025-10-25T20:57:20.123824",
+      "asset": "🏭 НЛМК (NLMK)",
+      "direction": "⬇️ Вниз",
+      "amount": 1000.0,
+      "time_sec": "30 сек",
+      "result": "Поражение",
+      "win_amount": 0,
+      "new_balance": 300.0
+    }
+  ]
+}

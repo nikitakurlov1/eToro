@@ -1,0 +1,75 @@
+2025-10-23 18:27:24,383 - __main__ - INFO - Starting bot...
+2025-10-23 18:27:24,430 - __main__ - INFO - Application created successfully
+2025-10-23 18:27:24,431 - __main__ - INFO - Handlers registered
+2025-10-23 18:27:24,431 - __main__ - INFO - Starting polling...
+2025-10-23 18:27:27,644 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getMe "HTTP/1.1 200 OK"
+2025-10-23 18:27:27,764 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/deleteWebhook "HTTP/1.1 200 OK"
+2025-10-23 18:27:27,765 - telegram.ext.Application - INFO - Application started
+2025-10-23 18:27:30,223 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:27:30,227 - __main__ - INFO - Received /start from user: 844012884
+2025-10-23 18:27:31,012 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:27:33,583 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:27:45,554 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:27:50,260 - __main__ - ERROR - Error sending GIF: Timed out
+2025-10-23 18:27:52,965 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:27:54,236 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:27:54,413 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:27:54,415 - __main__ - INFO - Received /start from user: 844012884
+2025-10-23 18:27:57,324 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:28:02,160 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:28:14,435 - __main__ - ERROR - Error sending GIF: Timed out
+2025-10-23 18:28:16,960 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:28:17,232 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:28:18,572 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:28:18,575 - __main__ - INFO - Received /start from user: 844012884
+2025-10-23 18:28:30,007 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:28:34,344 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:28:38,624 - __main__ - ERROR - Error sending GIF: Timed out
+2025-10-23 18:28:40,012 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:28:40,072 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:28:40,631 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:28:40,632 - __main__ - INFO - Received /start from user: 844012884
+2025-10-23 18:28:45,532 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:28:49,755 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:28:58,492 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:29:00,072 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:29:00,648 - __main__ - ERROR - Error sending GIF: Timed out
+2025-10-23 18:29:01,242 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:29:05,719 - __main__ - ERROR - Error in start handler: Timed out
+2025-10-23 18:29:05,883 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:29:05,886 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
+2025-10-23 18:29:06,471 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:29:06,473 - __main__ - INFO - Received /start from user: 844012884
+2025-10-23 18:29:26,494 - __main__ - ERROR - Error sending GIF: Timed out
+2025-10-23 18:29:27,809 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:29:28,699 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:29:28,700 - __main__ - INFO - Received /start from user: 844012884
+2025-10-23 18:29:48,724 - __main__ - ERROR - Error sending GIF: Timed out
+2025-10-23 18:29:49,143 - __main__ - INFO - Bot stopped
+2025-10-23 18:30:17,949 - __main__ - INFO - Starting bot...
+2025-10-23 18:30:17,989 - __main__ - INFO - Application created successfully
+2025-10-23 18:30:17,992 - __main__ - INFO - Handlers registered
+2025-10-23 18:30:17,992 - __main__ - INFO - Starting polling...
+2025-10-23 18:30:18,851 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getMe "HTTP/1.1 200 OK"
+2025-10-23 18:30:18,930 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/deleteWebhook "HTTP/1.1 200 OK"
+2025-10-23 18:30:18,931 - apscheduler.scheduler - INFO - Scheduler started
+2025-10-23 18:30:18,931 - telegram.ext.Application - INFO - Application started
+2025-10-23 18:30:22,230 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:30:22,238 - __main__ - INFO - Received /start from user: 844012884
+2025-10-23 18:30:42,303 - __main__ - ERROR - Error sending welcome message: Timed out
+2025-10-23 18:30:47,749 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:30:53,407 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:30:59,910 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:31:00,171 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-10-23 18:31:00,172 - __main__ - INFO - Button pressed: agreed by user 844012884
+2025-10-23 18:31:00,289 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/editMessageText "HTTP/1.1 200 OK"
+2025-10-23 18:31:00,290 - __main__ - INFO - Successfully processed agreement
+2025-10-23 18:31:29,997 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:32:00,106 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:32:30,218 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:33:00,312 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:33:06,515 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
+2025-10-23 18:33:06,522 - __main__ - INFO - Received /start from user: 844012884
+2025-10-23 18:33:26,715 - __main__ - ERROR - Error sending welcome message: Timed out
+2025-10-23 18:33:28,736 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/sendMessage "HTTP/1.1 200 OK"
+2025-10-23 18:33:36,628 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8/getUpdates "HTTP/1.1 200 OK"
