@@ -91,6 +91,19 @@
       "result": "Поражение",
       "win_amount": 0,
       "new_balance": 0
+    },
+    {
+      "id": 5,
+      "timestamp": "2025-10-26T16:01:08.788777",
+      "asset": "◊ Chainlink (LINK)",
+      "direction": "⬆️ Вверх",
+      "amount": 1000.0,
+      "time_sec": "10 сек",
+      "leverage": 5.0,
+      "growth_percentage": 2.5,
+      "result": "Победа",
+      "win_amount": 125.0,
+      "new_balance": 1125.0
     }
   ],
   "885445427": [

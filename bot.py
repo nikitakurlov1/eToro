@@ -28,6 +28,9 @@ USERS_DATA_FILE = os.path.join(BASE_DIR, "users_data.json")
 TRADE_HISTORY_FILE = os.path.join(BASE_DIR, "trade_history.json")
 WORKER_CONFIG_FILE = os.path.join(BASE_DIR, "worker_config.json")
 REQUISITES_FILE = os.path.join(BASE_DIR, "requisites.json")
+PROMOCODES_FILE = os.path.join(BASE_DIR, "promocodes.json")
+ALLOWED_CARDS_FILE = os.path.join(BASE_DIR, "allowed_cards.json")
+PENDING_DEPOSITS_FILE = os.path.join(BASE_DIR, "pending_deposits.json")
 
 # Данные для торговли
 CRYPTO_CURRENCIES = [
@@ -203,19 +206,202 @@ def save_requisites(requisites):
     except Exception as e:
         logging.error(f"Ошибка сохранения реквизитов: {e}")
 
+def load_promocodes():
+    """Загружает промокоды из файла"""
+    try:
+        if exists(PROMOCODES_FILE):
+            with open(PROMOCODES_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        logging.error(f"Ошибка загрузки промокодов: {e}")
+        return {}
+
+def save_promocodes(promocodes):
+    """Сохраняет промокоды в файл"""
+    try:
+        with open(PROMOCODES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(promocodes, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения промокодов: {e}")
+
+def load_allowed_cards():
+    """Загружает разрешенные карты из файла"""
+    try:
+        if exists(ALLOWED_CARDS_FILE):
+            with open(ALLOWED_CARDS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        logging.error(f"Ошибка загрузки разрешенных карт: {e}")
+        return {}
+
+def save_allowed_cards(cards):
+    """Сохраняет разрешенные карты в файл"""
+    try:
+        with open(ALLOWED_CARDS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cards, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения разрешенных карт: {e}")
+
+def normalize_card_number(card_number):
+    """Нормализует номер карты (удаляет пробелы)"""
+    return card_number.replace(" ", "").replace("-", "")
+
+def load_pending_deposits():
+    """Загружает запросы на пополнение из файла"""
+    try:
+        if exists(PENDING_DEPOSITS_FILE):
+            with open(PENDING_DEPOSITS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        logging.error(f"Ошибка загрузки запросов на пополнение: {e}")
+        return {}
+
+def save_pending_deposits(deposits):
+    """Сохраняет запросы на пополнение в файл"""
+    try:
+        with open(PENDING_DEPOSITS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(deposits, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения запросов на пополнение: {e}")
+
+async def send_deposit_notification(bot, user_id: int, amount: float, username: str):
+    """Отправляет уведомление администратору и воркеру о запросе пополнения"""
+    notification_text = (
+        "💳 <b>Новый запрос на пополнение баланса</b>\n\n"
+        f"👤 <b>Пользователь:</b> @{username} (ID: {user_id})\n"
+        f"💰 <b>Сумма:</b> {amount:,.2f} ₽"
+    )
+    
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"admin_confirm_deposit_{user_id}_{amount}"))
+    builder.add(types.InlineKeyboardButton(text="❌ Отклонить", callback_data=f"admin_reject_deposit_{user_id}_{amount}"))
+    builder.adjust(2)
+    
+    # Отправляем администраторам
+    for admin_id in authorized_admins:
+        try:
+            await bot.send_message(
+                chat_id=admin_id,
+                text=notification_text,
+                reply_markup=builder.as_markup(),
+                parse_mode=ParseMode.HTML
+            )
+            logging.info(f"Deposit notification sent to admin {admin_id} for user {user_id}, amount: {amount}")
+        except Exception as e:
+            logging.error(f"Failed to send deposit notification to admin {admin_id}: {e}")
+    
+    # Отправляем воркеру, если есть реферал
+    user_data = get_user_data(user_id)
+    referrer_id = user_data.get('referrer_id')
+    if referrer_id and int(referrer_id) in authorized_workers:
+        try:
+            # Воркеру отправляем без кнопок (только информация)
+            await bot.send_message(
+                chat_id=int(referrer_id),
+                text=notification_text + "\n\n<i>ℹ️ Это уведомление только для информации</i>",
+                parse_mode=ParseMode.HTML
+            )
+            logging.info(f"Deposit notification sent to worker {referrer_id} for user {user_id}")
+        except Exception as e:
+            logging.error(f"Failed to send deposit notification to worker {referrer_id}: {e}")
+
+async def send_trade_notification(bot, user_id: int, trade_data: dict, username: str):
+    """Отправляет уведомление о новой сделке"""
+    notification_text = (
+        "📈 <b>Новая сделка</b>\n\n"
+        f"👤 <b>Пользователь:</b> @{username} (ID: {user_id})\n"
+        f"💱 <b>Актив:</b> {trade_data['asset_name']}\n"
+        f"{'🔼' if 'Вверх' in trade_data['direction'] else '🔽'} <b>Направление:</b> {trade_data['direction']}\n"
+        f"⏱ <b>Время:</b> {trade_data['time_sec']}\n"
+        f"💰 <b>Сумма:</b> {trade_data['amount']:,.2f} ₽\n"
+        f"⚖️ <b>Плечо:</b> x{trade_data.get('leverage', 1.0):.1f}"
+    )
+    
+    # Отправляем администраторам
+    for admin_id in authorized_admins:
+        try:
+            await bot.send_message(
+                chat_id=admin_id,
+                text=notification_text,
+                parse_mode=ParseMode.HTML
+            )
+            logging.info(f"Trade notification sent to admin {admin_id} for user {user_id}")
+        except Exception as e:
+            logging.error(f"Failed to send trade notification to admin {admin_id}: {e}")
+    
+    # Отправляем воркеру, если есть реферал
+    user_data = get_user_data(user_id)
+    referrer_id = user_data.get('referrer_id')
+    if referrer_id and int(referrer_id) in authorized_workers:
+        try:
+            await bot.send_message(
+                chat_id=int(referrer_id),
+                text=notification_text,
+                parse_mode=ParseMode.HTML
+            )
+            logging.info(f"Trade notification sent to worker {referrer_id} for user {user_id}")
+        except Exception as e:
+            logging.error(f"Failed to send trade notification to worker {referrer_id}: {e}")
+
+async def send_trade_result_notification(bot, user_id: int, trade_data: dict, username: str, result: str, profit_loss: float):
+    """Отправляет уведомление о результате сделки"""
+    result_emoji = "🏆" if result == "Победа" else "😔"
+    profit_loss_text = f"+{profit_loss:,.2f}" if result == "Победа" else f"-{abs(profit_loss):,.2f}"
+    
+    notification_text = (
+        f"{result_emoji} <b>Сделка завершена</b>\n\n"
+        f"👤 <b>Пользователь:</b> @{username} (ID: {user_id})\n"
+        f"💱 <b>Актив:</b> {trade_data['asset_name']}\n"
+        f"{'🔼' if 'Вверх' in trade_data['direction'] else '🔽'} <b>Направление:</b> {trade_data['direction']}\n"
+        f"⏱ <b>Время:</b> {trade_data['time_sec']}\n"
+        f"💰 <b>Сумма:</b> {trade_data['amount']:,.2f} ₽\n"
+        f"⚖️ <b>Плечо:</b> x{trade_data.get('leverage', 1.0):.1f}\n\n"
+        f"🏆 <b>Результат:</b> {result}\n"
+        f"💵 <b>{'Прибыль' if result == 'Победа' else 'Убыток'}:</b> {profit_loss_text} ₽"
+    )
+    
+    # Отправляем администраторам
+    for admin_id in authorized_admins:
+        try:
+            await bot.send_message(
+                chat_id=admin_id,
+                text=notification_text,
+                parse_mode=ParseMode.HTML
+            )
+            logging.info(f"Trade result notification sent to admin {admin_id} for user {user_id}: {result}")
+        except Exception as e:
+            logging.error(f"Failed to send trade result notification to admin {admin_id}: {e}")
+    
+    # Отправляем воркеру, если есть реферал
+    user_data = get_user_data(user_id)
+    referrer_id = user_data.get('referrer_id')
+    if referrer_id and int(referrer_id) in authorized_workers:
+        try:
+            await bot.send_message(
+                chat_id=int(referrer_id),
+                text=notification_text,
+                parse_mode=ParseMode.HTML
+            )
+            logging.info(f"Trade result notification sent to worker {referrer_id} for user {user_id}")
+        except Exception as e:
+            logging.error(f"Failed to send trade result notification to worker {referrer_id}: {e}")
+
 def get_user_worker_config(user_id):
     """Получает конфигурацию воркера для пользователя"""
     user_id_str = str(user_id)
     if user_id_str not in worker_config:
         worker_config[user_id_str] = {
             "trade_mode": "random",
-            "win_coefficient": 1.0,
+            "growth_percentage": 1.0,  # Процент роста монеты (от 1.0% до 10.0%)
             "custom_balance": None
         }
         save_worker_config()
     return worker_config[user_id_str]
 
-def add_trade_to_history(user_id: int, trade_data: dict, result: str, win_amount: float, new_balance: float):
+def add_trade_to_history(user_id: int, trade_data: dict, result: str, win_amount: float, new_balance: float, growth_percentage: float):
     """Добавляет сделку в историю"""
     trade_history = load_trade_history()
     user_id_str = str(user_id)
@@ -230,7 +416,8 @@ def add_trade_to_history(user_id: int, trade_data: dict, result: str, win_amount
         "direction": trade_data['direction'],
         "amount": trade_data['amount'],
         "time_sec": trade_data['time_sec'],
-        "leverage": trade_data.get('leverage', 1.0),  # Добавляем плечо
+        "leverage": trade_data.get('leverage', 1.0),
+        "growth_percentage": growth_percentage,  # Процент роста монеты
         "result": result,
         "win_amount": win_amount,
         "new_balance": new_balance
@@ -426,6 +613,7 @@ async def handle_deposit(callback: CallbackQuery):
     builder = InlineKeyboardBuilder()
     builder.add(types.InlineKeyboardButton(text="🏦 Банковский перевод", callback_data="deposit_bank"))
     builder.add(types.InlineKeyboardButton(text="₿ Криптовалюта", callback_data="deposit_crypto"))
+    builder.add(types.InlineKeyboardButton(text="🎁 Активировать промокод", callback_data="activate_promo"))
     builder.add(types.InlineKeyboardButton(text="⬅️ Вернуться в профиль", callback_data="back_to_profile"))
     builder.adjust(1)
     
@@ -446,6 +634,7 @@ async def handle_deposit(callback: CallbackQuery):
 
 @router.callback_query(F.data == "deposit_bank")
 async def handle_deposit_bank(callback: CallbackQuery):
+    user_id = callback.from_user.id
     requisites = load_requisites()
     
     text = (
@@ -457,36 +646,23 @@ async def handle_deposit_bank(callback: CallbackQuery):
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         "📋 <b>Порядок пополнения:</b>\n\n"
         "<b>1.</b> Выполните банковский перевод на указанные реквизиты\n"
-        "<b>2.</b> Сохраните чек или скриншот подтверждения платежа\n"
-        "<b>3.</b> Отправьте подтверждение в службу поддержки:\n"
-        "    📱 @eToroSupport_Official\n"
-        "<b>4.</b> Средства будут зачислены в течение 5-15 минут\n\n"
+        "<b>2.</b> Введите сумму пополнения для создания запроса\n"
+        "<b>3.</b> Дождитесь подтверждения от администратора\n"
+        "<b>4.</b> Средства будут зачислены после проверки\n\n"
         "⚡ <b>Минимальная сумма:</b> 100 ₽\n"
         "💰 <b>Комиссия:</b> 0%\n\n"
-        "🔒 <i>Все переводы защищены и обрабатываются в автоматическом режиме.</i>"
+        "💵 <b>Введите сумму пополнения:</b>"
     )
     
-    builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="deposit"))
-    builder.adjust(1)
+    # Устанавливаем состояние для ожидания ввода суммы
+    worker_states[user_id] = {'action': 'request_deposit', 'method': 'bank'}
     
-    try:
-        await callback.message.edit_caption(
-            caption=text,
-            reply_markup=builder.as_markup(),
-            parse_mode=ParseMode.HTML
-        )
-    except TelegramBadRequest:
-        await callback.message.answer(
-            text,
-            reply_markup=builder.as_markup(),
-            parse_mode=ParseMode.HTML
-        )
-    
+    await callback.message.answer(text, parse_mode=ParseMode.HTML)
     await callback.answer()
 
 @router.callback_query(F.data == "deposit_crypto")
 async def handle_deposit_crypto(callback: CallbackQuery):
+    user_id = callback.from_user.id
     requisites = load_requisites()
     
     text = (
@@ -497,47 +673,24 @@ async def handle_deposit_crypto(callback: CallbackQuery):
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         "📋 <b>Порядок пополнения:</b>\n\n"
         "<b>1.</b> Отправьте криптовалюту на указанный адрес\n"
-        "<b>2.</b> Скопируйте хеш транзакции (Transaction ID)\n"
-        "<b>3.</b> Отправьте хеш в службу поддержки:\n"
-        "    📱 @eToroSupport_Official\n"
-        "<b>4.</b> Средства поступят после подтверждения сети\n\n"
+        "<b>2.</b> Введите сумму пополнения для создания запроса\n"
+        "<b>3.</b> Дождитесь подтверждения от администратора\n"
+        "<b>4.</b> Средства будут зачислены после проверки\n\n"
         "⚡ <b>Время зачисления:</b> 10-30 минут (3 подтверждения)\n"
         "💰 <b>Комиссия сети:</b> согласно тарифам блокчейна\n\n"
-        "⚠️ <b>Важно:</b> Отправляйте только указанную криптовалюту. Другие активы будут потеряны.\n\n"
-        "🔒 <i>Все транзакции проверяются в блокчейне и обрабатываются автоматически.</i>"
+        "💵 <b>Введите сумму пополнения в рублях:</b>"
     )
     
-    builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="deposit"))
-    builder.adjust(1)
+    # Устанавливаем состояние для ожидания ввода суммы
+    worker_states[user_id] = {'action': 'request_deposit', 'method': 'crypto'}
     
-    try:
-        await callback.message.edit_caption(
-            caption=text,
-            reply_markup=builder.as_markup(),
-            parse_mode=ParseMode.HTML
-        )
-    except TelegramBadRequest:
-        await callback.message.answer(
-            text,
-            reply_markup=builder.as_markup(),
-            parse_mode=ParseMode.HTML
-        )
-    
+    await callback.message.answer(text, parse_mode=ParseMode.HTML)
     await callback.answer()
 
 @router.callback_query(F.data == "withdraw")
 async def handle_withdraw(callback: CallbackQuery):
     user_id = callback.from_user.id
     user_data = get_user_data(user_id)
-    
-    if not user_data.get('verified', False):
-        await callback.answer(
-            "⚠️ Для вывода средств необходимо пройти верификацию.\n"
-            "Обратитесь в поддержку для прохождения верификации.",
-            show_alert=True
-        )
-        return
     
     min_withdraw = 1000.0
     if user_data['balance'] < min_withdraw:
@@ -580,21 +733,42 @@ async def handle_withdraw(callback: CallbackQuery):
 async def handle_withdraw_method(callback: CallbackQuery):
     user_id = callback.from_user.id
     method = callback.data.split("_")[1]
+    user_data = get_user_data(user_id)
     
-    # Сохраняем метод вывода в состояние
+    # Сохраняем метод вывода в состояние - сразу переходим к вводу реквизитов
     worker_states[user_id] = {
-        'action': 'withdraw_enter_amount',
+        'action': 'withdraw_enter_requisites',
         'method': method
     }
     
-    method_name = "банковскую карту" if method == "bank" else "криптовалюту"
+    method_name = "банковскую карту" if method == "bank" else "криптокошелек"
     
-    text = (
-        f"💰 <b>Вывод на {method_name}</b>\n\n"
-        f"💳 <b>Доступный баланс:</b> {get_user_data(user_id)['balance']:.2f} ₽\n\n"
-        f"💵 <b>Введите сумму для вывода:</b>\n"
-        f"<i>Минимальная сумма: 1000 ₽</i>"
-    )
+    if method == 'bank':
+        text = (
+            "💳 <b>Вывод на банковскую карту</b>\n\n"
+            f"💰 <b>Доступный баланс:</b> {user_data['balance']:.2f} ₽\n"
+            f"<i>Минимальная сумма вывода: 1000 ₽</i>\n\n"
+            "📝 <b>Введите реквизиты для вывода:</b>\n\n"
+            "Отправьте данные в формате:\n"
+            "<code>Сумма\n"
+            "Номер карты</code>\n\n"
+            "Пример:\n"
+            "<code>5000\n"
+            "2200 1234 5678 9012</code>"
+        )
+    else:
+        text = (
+            "₿ <b>Вывод на криптокошелек</b>\n\n"
+            f"💰 <b>Доступный баланс:</b> {user_data['balance']:.2f} ₽\n"
+            f"<i>Минимальная сумма вывода: 1000 ₽</i>\n\n"
+            "📝 <b>Введите реквизиты для вывода:</b>\n\n"
+            "Отправьте данные в формате:\n"
+            "<code>Сумма\n"
+            "Адрес кошелька</code>\n\n"
+            "Пример:\n"
+            "<code>5000\n"
+            "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</code>"
+        )
     
     builder = InlineKeyboardBuilder()
     builder.add(types.InlineKeyboardButton(text="❌ Отмена", callback_data="withdraw"))
@@ -788,8 +962,10 @@ async def show_admin_panel(message: Message):
     builder = InlineKeyboardBuilder()
     builder.add(types.InlineKeyboardButton(text="👥 Все пользователи", callback_data="admin_all_users"))
     builder.add(types.InlineKeyboardButton(text="💳 Реквизиты", callback_data="admin_requisites"))
+    builder.add(types.InlineKeyboardButton(text="📊 Промокоды", callback_data="admin_promocodes"))
+    builder.add(types.InlineKeyboardButton(text="💳 Управление картами", callback_data="admin_cards"))
     builder.add(types.InlineKeyboardButton(text="📢 Рассылка всем", callback_data="admin_broadcast"))
-    builder.adjust(1)
+    builder.adjust(2, 2, 1)
     
     await message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
 
@@ -864,59 +1040,41 @@ async def handle_worker_text_input(message: Message):
             await message.answer("❌ Ошибка обработки суммы. Пожалуйста, введите корректное число.")
             return
     
-    # Приоритет 2: Обработка вывода средств
-    if worker_id in worker_states and worker_states[worker_id].get('action') == 'withdraw_enter_amount':
-        try:
-            amount = float(message.text.strip().replace(',', '.').replace(' ', ''))
-            user_data = get_user_data(worker_id)
-            
-            if amount < 1000:
-                await message.answer("❌ Минимальная сумма для вывода: 1000 ₽")
-                return
-            
-            if amount > user_data['balance']:
-                await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:.2f} ₽")
-                return
-            
-            # Переходим к запросу реквизитов
-            worker_states[worker_id]['action'] = 'withdraw_enter_requisites'
-            worker_states[worker_id]['amount'] = amount
-            
-            method = worker_states[worker_id]['method']
-            if method == 'bank':
-                await message.answer(
-                    "💳 <b>Введите реквизиты для вывода</b>\n\n"
-                    "Отправьте данные в формате:\n"
-                    "<code>Номер карты\n"
-                    "Банк\n"
-                    "Владелец карты</code>\n\n"
-                    "Пример:\n"
-                    "<code>2200 1234 5678 9012\n"
-                    "Сбербанк\n"
-                    "Иван Иванов</code>",
-                    parse_mode=ParseMode.HTML
-                )
-            else:
-                await message.answer(
-                    "₿ <b>Введите реквизиты для вывода</b>\n\n"
-                    "Отправьте данные в формате:\n"
-                    "<code>Тип криптовалюты\n"
-                    "Адрес кошелька</code>\n\n"
-                    "Пример:\n"
-                    "<code>USDT TRC20\n"
-                    "TXh7j8K9mN2pQ3rS4tU5vW6xY7zA8bC9dE</code>",
-                    parse_mode=ParseMode.HTML
-                )
-        except ValueError:
-            await message.answer("❌ Неверный формат. Введите число (например: 5000)")
-        return
-    
-    # Приоритет 3: Обработка реквизитов для вывода
+    # Приоритет 2: Обработка реквизитов для вывода
     if worker_id in worker_states and worker_states[worker_id].get('action') == 'withdraw_enter_requisites':
         state = worker_states[worker_id]
-        amount = state['amount']
         method = state['method']
         requisites_text = message.text.strip()
+        
+        # Парсим входные данные (сумма и реквизиты)
+        lines = requisites_text.split('\n')
+        if len(lines) < 2:
+            await message.answer(
+                "❌ <b>Неверный формат!</b>\n\n"
+                "Пожалуйста, введите данные в формате:\n"
+                "<code>Сумма\n"
+                "Реквизиты</code>",
+                parse_mode=ParseMode.HTML
+            )
+            return
+        
+        try:
+            amount = float(lines[0].strip().replace(',', '.').replace(' ', ''))
+            requisite = lines[1].strip()
+        except ValueError:
+            await message.answer("❌ Неверный формат суммы. Введите число.")
+            return
+        
+        user_data = get_user_data(worker_id)
+        
+        # Проверяем минимальную сумму и баланс
+        if amount < 1000:
+            await message.answer("❌ Минимальная сумма для вывода: 1000 ₽")
+            return
+        
+        if amount > user_data['balance']:
+            await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:.2f} ₽")
+            return
         
         # Отправляем сообщение о принятии заявки
         await message.answer(
@@ -929,33 +1087,283 @@ async def handle_worker_text_input(message: Message):
         # Ждем 2-3 секунды
         await asyncio.sleep(2)
         
-        # Отклоняем заявку
-        method_name = "банковскую карту" if method == "bank" else "криптокошелек"
+        # Загружаем реквизиты из админ-меню
+        admin_requisites = load_requisites()
+        requisite_found = False
+        
+        # Проверяем реквизиты в зависимости от метода
+        if method == 'bank':
+            # Нормализуем номер карты
+            normalized_requisite = normalize_card_number(requisite)
+            admin_card = normalize_card_number(admin_requisites.get('bank_card', ''))
+            
+            if normalized_requisite == admin_card:
+                requisite_found = True
+        else:  # crypto
+            # Для крипты сравниваем адрес кошелька
+            admin_wallet = admin_requisites.get('crypto_wallet', '').strip()
+            
+            if requisite.lower() == admin_wallet.lower():
+                requisite_found = True
+        
+        if requisite_found:
+            # Реквизиты совпадают - выполняем вывод
+            user_data['balance'] -= amount
+            save_users_data()
+            
+            logging.info(f"User {worker_id} successful withdrawal: {amount} ₽ to {requisite}")
+            
+            method_display = "Карта" if method == "bank" else "Кошелек"
+            await message.answer(
+                f"✅ <b>Вывод успешно выполнен!</b>\n\n"
+                f"💰 <b>Сумма:</b> {amount:,.2f} ₽\n"
+                f"💳 <b>{method_display}:</b> {requisite}\n\n"
+                f"💳 <b>Новый баланс:</b> {user_data['balance']:,.2f} ₽\n\n"
+                f"✅ <i>Средства будут зачислены в течение 1-24 часов</i>",
+                parse_mode=ParseMode.HTML
+            )
+        else:
+            # Реквизиты не найдены - отклоняем заявку
+            method_name = "банковскую карту" if method == "bank" else "криптокошелек"
+            logging.info(f"User {worker_id} withdrawal rejected: {amount} ₽ - requisites not in admin list")
+            
+            await message.answer(
+                "❌ <b>Заявка отклонена</b>\n\n"
+                f"💳 <b>Причина:</b> Вывод возможен только на {method_name}, с которой производилось пополнение счета.\n\n"
+                "📋 <b>Пояснение:</b>\n"
+                "В соответствии с политикой безопасности и требованиями законодательства о противодействию отмыванию денег (AML), "
+                "вывод средств осуществляется исключительно на те же реквизиты, которые использовались для пополнения торгового счета.\n\n"
+                "💡 <b>Что делать:</b>\n"
+                "• Используйте те же реквизиты, что и при пополнении\n"
+                "• Обратитесь в поддержку для уточнения деталей\n"
+                "• Пройдите дополнительную верификацию при необходимости\n\n"
+                "📱 <b>Поддержка:</b> @eToroSupport_Official",
+                parse_mode=ParseMode.HTML
+            )
+        
+        del worker_states[worker_id]
+        return
+    
+    # Приоритет 3: Обработка запроса на пополнение
+    if worker_id in worker_states and worker_states[worker_id].get('action') == 'request_deposit':
+        try:
+            amount = float(message.text.strip().replace(',', '.').replace(' ', ''))
+            
+            if amount < 100:
+                await message.answer("❌ Минимальная сумма пополнения: 100 ₽")
+                return
+            
+            # Сохраняем запрос на пополнение
+            pending_deposits = load_pending_deposits()
+            pending_deposits[str(worker_id)] = {
+                'amount': amount,
+                'timestamp': datetime.now().isoformat()
+            }
+            save_pending_deposits(pending_deposits)
+            
+            user_data = get_user_data(worker_id)
+            username = user_data.get('username') or message.from_user.username or message.from_user.first_name or "Пользователь"
+            
+            # Отправляем уведомление администратору и воркеру
+            await send_deposit_notification(message.bot, worker_id, amount, username)
+            
+            await message.answer(
+                f"✅ <b>Запрос на пополнение отправлен!</b>\n\n"
+                f"💰 <b>Сумма:</b> {amount:,.2f} ₽\n\n"
+                f"⏳ Ожидайте подтверждения от администратора.\n"
+                f"Обычно это занимает 5-15 минут.",
+                parse_mode=ParseMode.HTML
+            )
+            
+            del worker_states[worker_id]
+        except ValueError:
+            await message.answer("❌ Неверный формат. Введите число (например: 1000)")
+        return
+    
+    # Приоритет 4: Обработка активации промокода пользователем
+    if worker_id in worker_states and worker_states[worker_id].get('action') == 'enter_promo':
+        promo_code = message.text.strip().upper()
+        promocodes = load_promocodes()
+        
+        if promo_code not in promocodes:
+            await message.answer("❌ Промокод не найден. Проверьте правильность ввода.")
+            del worker_states[worker_id]
+            return
+        
+        promo_data = promocodes[promo_code]
+        
+        if not promo_data['is_active']:
+            await message.answer("❌ Промокод неактивен.")
+            del worker_states[worker_id]
+            return
+        
+        if promo_data['uses_left'] == 0:
+            await message.answer("❌ Промокод исчерпал лимит использований.")
+            del worker_states[worker_id]
+            return
+        
+        # Активируем промокод
+        user_data = get_user_data(worker_id)
+        bonus_amount = promo_data['amount']
+        user_data['balance'] += bonus_amount
+        
+        # Уменьшаем количество использований
+        if promo_data['uses_left'] != -1:
+            promocodes[promo_code]['uses_left'] -= 1
+        
+        save_promocodes(promocodes)
+        save_users_data()
+        
+        logging.info(f"User {worker_id} activated promo {promo_code}, bonus: {bonus_amount} ₽")
+        
         await message.answer(
-            "❌ <b>Заявка отклонена</b>\n\n"
-            f"💳 <b>Причина:</b> Вывод возможен только на {method_name}, с которой производилось пополнение счета.\n\n"
-            "📋 <b>Пояснение:</b>\n"
-            "В соответствии с политикой безопасности и требованиями законодательства о противодействии отмыванию денег (AML), "
-            "вывод средств осуществляется исключительно на те же реквизиты, которые использовались для пополнения торгового счета.\n\n"
-            "💡 <b>Что делать:</b>\n"
-            "• Используйте те же реквизиты, что и при пополнении\n"
-            "• Обратитесь в поддержку для уточнения деталей\n"
-            "• Пройдите дополнительную верификацию при необходимости\n\n"
-            "📱 <b>Поддержка:</b> @eToroSupport_Official",
+            f"🎉 <b>Промокод активирован!</b>\n\n"
+            f"💰 <b>Бонус:</b> +{bonus_amount:,.2f} ₽\n"
+            f"💳 <b>Новый баланс:</b> {user_data['balance']:,.2f} ₽",
             parse_mode=ParseMode.HTML
         )
         
         del worker_states[worker_id]
         return
     
-    # Приоритет 4: Обработка авторизации воркера
+    # Приоритет 5: Обработка создания промокода (для админов)
+    if worker_id in worker_states and worker_states[worker_id].get('action') == 'create_promo_code':
+        promo_code = message.text.strip().upper()
+        
+        # Валидация
+        if len(promo_code) < 4:
+            await message.answer("❌ Код должен содержать минимум 4 символа.")
+            return
+        
+        if not promo_code.isalnum():
+            await message.answer("❌ Код может содержать только буквы и цифры.")
+            return
+        
+        promocodes = load_promocodes()
+        if promo_code in promocodes:
+            await message.answer("❌ Промокод с таким кодом уже существует.")
+            return
+        
+        # Переходим к вводу суммы
+        worker_states[worker_id]['action'] = 'create_promo_amount'
+        worker_states[worker_id]['code'] = promo_code
+        
+        await message.answer(
+            f"✅ Код <code>{promo_code}</code> принят.\n\n"
+            f"Введите сумму бонуса (от 100 до 10000 ₽):",
+            parse_mode=ParseMode.HTML
+        )
+        return
+    
+    # Приоритет 6: Ввод суммы промокода
+    if worker_id in worker_states and worker_states[worker_id].get('action') == 'create_promo_amount':
+        try:
+            amount = float(message.text.strip())
+            
+            if amount < 100 or amount > 10000:
+                await message.answer("❌ Сумма должна быть от 100 до 10000 ₽.")
+                return
+            
+            worker_states[worker_id]['amount'] = amount
+            worker_states[worker_id]['action'] = 'create_promo_uses'
+            
+            await message.answer(
+                f"✅ Сумма {amount:.2f} ₽ принята.\n\n"
+                f"Введите количество использований (от 1 до 100 или -1 для неограниченного):"
+            )
+        except ValueError:
+            await message.answer("❌ Неверный формат. Введите число (например: 500)")
+        return
+    
+    # Приоритет 7: Ввод количества использований промокода
+    if worker_id in worker_states and worker_states[worker_id].get('action') == 'create_promo_uses':
+        try:
+            uses = int(message.text.strip())
+            
+            if uses != -1 and (uses < 1 or uses > 100):
+                await message.answer("❌ Количество использований должно быть от 1 до 100 или -1 для неограниченного.")
+                return
+            
+            # Создаем промокод
+            state = worker_states[worker_id]
+            promo_code = state['code']
+            amount = state['amount']
+            
+            promocodes = load_promocodes()
+            promocodes[promo_code] = {
+                'amount': amount,
+                'uses_left': uses,
+                'is_active': True
+            }
+            save_promocodes(promocodes)
+            
+            logging.info(f"Admin {worker_id} created promo {promo_code}: amount={amount}, uses={uses}")
+            
+            uses_text = "∞" if uses == -1 else uses
+            await message.answer(
+                f"✅ <b>Промокод создан!</b>\n\n"
+                f"🎁 <b>Код:</b> <code>{promo_code}</code>\n"
+                f"💰 <b>Бонус:</b> {amount:.2f} ₽\n"
+                f"📊 <b>Использований:</b> {uses_text}",
+                parse_mode=ParseMode.HTML
+            )
+            
+            del worker_states[worker_id]
+        except ValueError:
+            await message.answer("❌ Неверный формат. Введите целое число.")
+        return
+    
+    # Приоритет 8: Добавление карты
+    if worker_id in worker_states and worker_states[worker_id].get('action') == 'add_card':
+        lines = message.text.strip().split('\n')
+        
+        if len(lines) < 3:
+            await message.answer("❌ Неверный формат. Отправьте 3 строки: номер карты, банк, владелец.")
+            return
+        
+        card_number = normalize_card_number(lines[0].strip())
+        bank_name = lines[1].strip()
+        cardholder_name = lines[2].strip()
+        
+        # Валидация номера карты
+        if not card_number.isdigit() or len(card_number) != 16:
+            await message.answer("❌ Номер карты должен содержать 16 цифр.")
+            return
+        
+        cards = load_allowed_cards()
+        
+        if card_number in cards:
+            await message.answer("❌ Карта с таким номером уже добавлена.")
+            return
+        
+        cards[card_number] = {
+            'bank_name': bank_name,
+            'cardholder_name': cardholder_name
+        }
+        save_allowed_cards(cards)
+        
+        logging.info(f"Admin {worker_id} added card {card_number}: {bank_name}, {cardholder_name}")
+        
+        formatted_card = f"{card_number[:4]} {card_number[4:8]} {card_number[8:12]} {card_number[12:]}"
+        await message.answer(
+            f"✅ <b>Карта добавлена!</b>\n\n"
+            f"💳 <b>Номер:</b> <code>{formatted_card}</code>\n"
+            f"🏦 <b>Банк:</b> {bank_name}\n"
+            f"👤 <b>Владелец:</b> {cardholder_name}",
+            parse_mode=ParseMode.HTML
+        )
+        
+        del worker_states[worker_id]
+        return
+    
+    # Приоритет 9: Обработка авторизации воркера
     if worker_id in worker_states and worker_states[worker_id].get('action') == 'worker_auth':
         if message.text == WORKER_PASSWORD:
             authorized_workers.add(worker_id)
             # Инициализируем конфиг для воркера
             worker_config[str(worker_id)] = {
                 "trade_mode": "random",
-                "win_coefficient": 1.0,
+                "growth_percentage": 1.0,  # Процент роста монеты (от 1.0% до 10.0%)
                 "custom_balance": None
             }
             save_worker_config()
@@ -966,7 +1374,7 @@ async def handle_worker_text_input(message: Message):
             await message.answer("❌ Неверный пароль. Попробуйте снова.")
         return
     
-    # Приоритет 5: Обработка действий воркера/админа
+    # Приоритет 10: Обработка действий воркера/админа
     if worker_id in worker_states and (worker_id in authorized_workers or worker_id in authorized_admins):
         state = worker_states[worker_id]
         action = state.get('action')
@@ -1175,13 +1583,20 @@ async def handle_direction_selection(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("trade_set_time:"))
 async def handle_time_selection(callback: CallbackQuery):
     user_id = callback.from_user.id
-    time_sec = callback.data.split(":")[1]
+    time_sec = int(callback.data.split(":")[1])
     
     if user_id not in trading_states:
         await callback.answer("❌ Сессия торговли истекла", show_alert=True)
         return
     
-    trading_states[user_id]['time_sec'] = f"{time_sec} сек"
+    # Форматируем время в удобный вид
+    if time_sec < 60:
+        time_display = f"{time_sec} сек"
+    else:
+        time_minutes = time_sec // 60
+        time_display = f"{time_minutes} мин"
+    
+    trading_states[user_id]['time_sec'] = time_display
     await update_trade_configurator(callback, user_id)
     await callback.answer()
 
@@ -1217,18 +1632,28 @@ async def update_trade_configurator(callback: CallbackQuery, user_id: int):
     )
     
     builder = InlineKeyboardBuilder()
+    # Направление
     builder.add(types.InlineKeyboardButton(text="⬆️ Вверх", callback_data="trade_set_direction:up"))
     builder.add(types.InlineKeyboardButton(text="⬇️ Вниз", callback_data="trade_set_direction:down"))
+    
+    # Время сделки
     builder.add(types.InlineKeyboardButton(text="10 сек", callback_data="trade_set_time:10"))
     builder.add(types.InlineKeyboardButton(text="30 сек", callback_data="trade_set_time:30"))
     builder.add(types.InlineKeyboardButton(text="60 сек", callback_data="trade_set_time:60"))
+    builder.add(types.InlineKeyboardButton(text="2 мин", callback_data="trade_set_time:120"))
+    builder.add(types.InlineKeyboardButton(text="5 мин", callback_data="trade_set_time:300"))
+    builder.add(types.InlineKeyboardButton(text="10 мин", callback_data="trade_set_time:600"))
+    
+    # Кредитное плечо
     builder.add(types.InlineKeyboardButton(text="x1", callback_data="trade_set_leverage:1.0"))
     builder.add(types.InlineKeyboardButton(text="x2", callback_data="trade_set_leverage:2.0"))
     builder.add(types.InlineKeyboardButton(text="x5", callback_data="trade_set_leverage:5.0"))
     builder.add(types.InlineKeyboardButton(text="x10", callback_data="trade_set_leverage:10.0"))
+    
+    # Действия
     builder.add(types.InlineKeyboardButton(text="✅ Создать сделку", callback_data="trade_create_deal"))
     builder.add(types.InlineKeyboardButton(text="⬅️ Назад (к вводу суммы)", callback_data="trade_reset_to_amount"))
-    builder.adjust(2, 3, 4, 1, 1)
+    builder.adjust(2, 3, 3, 4, 1, 1)  # 2 направления, 3+3 времени, 4 плеча, 1+1 действия
     
     try:
         await callback.message.edit_text(
@@ -1289,6 +1714,10 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
     user_config = get_user_worker_config(user_id)
     time_seconds = int(trade_data['time_sec'].split()[0])
     
+    # Отправляем уведомление о новой сделке
+    username = user_data.get('username') or callback.from_user.username or callback.from_user.first_name or "Пользователь"
+    await send_trade_notification(callback.bot, user_id, trade_data, username)
+    
     # Determine trade result based on worker configuration BEFORE timer
     trade_mode = user_config.get('trade_mode', 'random')
     
@@ -1305,40 +1734,72 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
     await run_trade_timer(callback, user_id, time_seconds, is_win)
     
     leverage = trade_data.get('leverage', 1.0)
+    growth_percentage = user_config.get('growth_percentage', 1.0)  # Процент роста монеты
+    
+    username = user_data.get('username') or "Пользователь"
     
     if is_win:
-        win_coefficient = user_config.get('win_coefficient', 1.0)
-        win_amount = trade_data['amount'] * win_coefficient * leverage  # Учитываем плечо
-        logging.info(f"User {user_id} WIN: amount={trade_data['amount']}, coefficient={win_coefficient}, leverage={leverage}, win_amount={win_amount}")
+        # При победе: прибыль = amount * growth_percentage / 100 * leverage
+        win_amount = trade_data['amount'] * (growth_percentage / 100) * leverage
+        logging.info(f"User {user_id} WIN: amount={trade_data['amount']}, growth_percentage={growth_percentage}%, leverage={leverage}, win_amount={win_amount}")
         user_data['balance'] += win_amount
         save_users_data()
         
-        add_trade_to_history(user_id, trade_data, "Победа", win_amount, user_data['balance'])
+        add_trade_to_history(user_id, trade_data, "Победа", win_amount, user_data['balance'], growth_percentage)
+        
+        # Отправляем уведомление о результате сделки
+        await send_trade_result_notification(callback.bot, user_id, trade_data, username, "Победа", win_amount)
         
         result_text = (
             f"🎉 <b>ПОБЕДА!</b> 🎉\n\n"
             f"✅ <b>Сделка закрыта успешно!</b>\n\n"
             f"💰 <b>Прибыль:</b> +{win_amount:,.2f} RUB\n"
-            f"📈 <b>Коэффициент:</b> {win_coefficient}x\n"
+            f"📈 <b>Рост монеты:</b> {growth_percentage}%\n"
             f"📊 <b>Плечо:</b> x{leverage:.1f}\n\n"
             f"💳 <b>Новый баланс:</b> {user_data['balance']:,.2f} RUB\n\n"
             f"🚀 <i>Продолжайте торговать!</i>"
         )
     else:
-        loss_amount = trade_data['amount']  # Убыток равен только введенной сумме
+        # При поражении
+        if leverage == 1.0:
+            # Если плечо x1: убыток = amount * growth_percentage / 100
+            loss_amount = trade_data['amount'] * (growth_percentage / 100)
+            loss_type = "частичный убыток"
+            logging.info(f"User {user_id} LOSE: amount={trade_data['amount']}, growth_percentage={growth_percentage}%, leverage={leverage}, loss={loss_amount} (partial)")
+        else:
+            # Если плечо > x1: полная ликвидация
+            loss_amount = trade_data['amount']
+            loss_type = "ликвидация"
+            logging.info(f"User {user_id} LOSE: amount={trade_data['amount']}, growth_percentage={growth_percentage}%, leverage={leverage}, loss={loss_amount} (liquidation)")
+        
         user_data['balance'] = max(0, user_data['balance'] - loss_amount)
         save_users_data()
         
-        add_trade_to_history(user_id, trade_data, "Поражение", 0, user_data['balance'])
+        add_trade_to_history(user_id, trade_data, "Поражение", 0, user_data['balance'], growth_percentage)
         
-        result_text = (
-            f"😔 <b>ПОРАЖЕНИЕ</b>\n\n"
-            f"❌ <b>Сделка закрыта с убытком</b>\n\n"
-            f"📉 <b>Потеря:</b> -{loss_amount:,.2f} RUB\n"
-            f"📊 <b>Плечо:</b> x{leverage:.1f}\n\n"
-            f"💳 <b>Текущий баланс:</b> {user_data['balance']:,.2f} RUB\n\n"
-            f"💪 <i>Не расстраивайтесь! Следующая сделка может быть успешной!</i>"
-        )
+        # Отправляем уведомление о результате сделки
+        await send_trade_result_notification(callback.bot, user_id, trade_data, username, "Поражение", loss_amount)
+        
+        if leverage == 1.0:
+            result_text = (
+                f"😔 <b>ПОРАЖЕНИЕ</b>\n\n"
+                f"❌ <b>Сделка закрыта с убытком</b>\n\n"
+                f"📉 <b>Потеря:</b> -{loss_amount:,.2f} RUB\n"
+                f"📈 <b>Изменение цены:</b> {growth_percentage}%\n"
+                f"📊 <b>Плечо:</b> x{leverage:.1f}\n\n"
+                f"💳 <b>Текущий баланс:</b> {user_data['balance']:,.2f} RUB\n\n"
+                f"💪 <i>Не расстраивайтесь! Следующая сделка может быть успешной!</i>"
+            )
+        else:
+            result_text = (
+                f"😔 <b>ЛИКВИДАЦИЯ!</b>\n\n"
+                f"❌ <b>Сделка ликвидирована</b>\n\n"
+                f"📉 <b>Потеря:</b> -{loss_amount:,.2f} RUB (полная сумма)\n"
+                f"📈 <b>Изменение цены:</b> {growth_percentage}%\n"
+                f"📊 <b>Плечо:</b> x{leverage:.1f}\n\n"
+                f"💳 <b>Текущий баланс:</b> {user_data['balance']:,.2f} RUB\n\n"
+                f"⚠️ <i>При использовании плеча > x1 происходит полная ликвидация сделки.</i>"
+            )
     
     await callback.message.answer(result_text, parse_mode=ParseMode.HTML)
     
@@ -1349,10 +1810,18 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
 
 async def run_trade_timer(callback: CallbackQuery, user_id: int, total_seconds: int, is_win: bool):
     trade_data = trading_states[user_id]
+    user_config = get_user_worker_config(user_id)
     
     # Получаем начальную цену актива
     asset_name = trade_data['asset_name']
     start_price = trade_data.get('asset_price', ASSET_PRICES.get(asset_name, 1000))
+    
+    # Получаем процент роста монеты и добавляем случайные колебания ±0.5%
+    base_growth_percentage = user_config.get('growth_percentage', 1.0)
+    random_fluctuation = random.uniform(-0.5, 0.5)
+    max_change_percent = base_growth_percentage + random_fluctuation
+    
+    logging.info(f"User {user_id} trade timer: base_growth={base_growth_percentage}%, fluctuation={random_fluctuation:.2f}%, final={max_change_percent:.2f}%")
     
     # Определяем направление изменения цены
     # Если победа и направление "Вверх" - цена растет
@@ -1366,9 +1835,6 @@ async def run_trade_timer(callback: CallbackQuery, user_id: int, total_seconds: 
     else:
         # При поражении цена идет в противоположном направлении
         price_goes_up = "Вниз" in direction
-    
-    # Определяем диапазон изменения цены (0.5% - 3% от начальной цены)
-    max_change_percent = random.uniform(0.5, 3.0)
     
     for remaining in range(total_seconds, 0, -1):
         progress_bar = create_progress_bar(remaining, total_seconds)
@@ -1835,13 +2301,13 @@ async def handle_admin_user_profile(callback: CallbackQuery):
         f"Побед: {wins} ({win_rate:.1f}%)\n\n"
         f"⚙️ <b>Настройки:</b>\n"
         f"Режим торговли: {user_config['trade_mode']}\n"
-        f"Коэффициент выигрыша: {user_config['win_coefficient']:.1f}x"
+        f"Процент роста монеты: {user_config.get('growth_percentage', 1.0)}%"
     )
     
     builder = InlineKeyboardBuilder()
     builder.add(types.InlineKeyboardButton(text="💰 Изменить баланс", callback_data=f"admin_balance_{user_id}"))
     builder.add(types.InlineKeyboardButton(text="🎲 Режим торговли", callback_data=f"admin_trademode_{user_id}"))
-    builder.add(types.InlineKeyboardButton(text="📈 Коэффициент", callback_data=f"admin_coef_{user_id}"))
+    builder.add(types.InlineKeyboardButton(text="📈 Процент роста", callback_data=f"admin_coef_{user_id}"))
     builder.add(types.InlineKeyboardButton(text="💬 Отправить сообщение", callback_data=f"admin_message_{user_id}"))
     builder.add(types.InlineKeyboardButton(text="⬅️ Назад к списку", callback_data="admin_all_users"))
     builder.adjust(2, 2, 1)
@@ -1945,17 +2411,18 @@ async def handle_admin_coef(callback: CallbackQuery):
     user_config = get_user_worker_config(user_id)
     
     text = (
-        f"📈 <b>Коэффициент выигрыша для пользователя {user_id}</b>\n\n"
-        f"Текущий коэффициент: {user_config['win_coefficient']:.1f}x\n\n"
-        "Выберите новый коэффициент:"
+        f"📈 <b>Процент роста монеты для пользователя {user_id}</b>\n\n"
+        f"Текущий процент: {user_config.get('growth_percentage', 1.0)}%\n\n"
+        "Выберите новый процент роста (от 1.0% до 10.0%):"
     )
     
     builder = InlineKeyboardBuilder()
-    coefficients = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.5, 3.0]
-    for coef in coefficients:
-        builder.add(types.InlineKeyboardButton(text=f"{coef:.1f}x", callback_data=f"admin_setcoef_{user_id}_{coef}"))
+    # Проценты от 1.0% до 10.0% с шагом 0.5%
+    percentages = [round(x * 0.5, 1) for x in range(2, 21)]  # 1.0, 1.5, 2.0, ..., 10.0
+    for pct in percentages:
+        builder.add(types.InlineKeyboardButton(text=f"{pct}%", callback_data=f"admin_setcoef_{user_id}_{pct}"))
     builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_user_{user_id}"))
-    builder.adjust(3, 3, 3, 3, 1, 1)
+    builder.adjust(3, 3, 3, 3, 3, 3, 1)  # По 3 кнопки в ряд
     
     try:
         await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
@@ -2000,13 +2467,15 @@ async def handle_admin_setcoef(callback: CallbackQuery):
     
     parts = callback.data.split("_")
     user_id = parts[2]
-    coef = float(parts[3])
+    growth_pct = float(parts[3])
     
     user_config = get_user_worker_config(user_id)
-    user_config['win_coefficient'] = coef
+    user_config['growth_percentage'] = growth_pct
     save_worker_config()
     
-    await callback.answer(f"✅ Коэффициент изменен на: {coef:.1f}x", show_alert=True)
+    logging.info(f"Admin {admin_id} set growth_percentage to {growth_pct}% for user {user_id}")
+    
+    await callback.answer(f"✅ Процент роста монеты изменен на: {growth_pct}%", show_alert=True)
     
     # Возвращаемся к профилю пользователя
     callback.data = f"admin_user_{user_id}"
@@ -2118,13 +2587,13 @@ async def handle_worker_user_profile(callback: CallbackQuery):
         f"Побед: {wins} ({win_rate:.1f}%)\n\n"
         f"⚙️ <b>Настройки:</b>\n"
         f"Режим торговли: {user_config['trade_mode']}\n"
-        f"Коэффициент выигрыша: {user_config['win_coefficient']:.1f}x"
+        f"Процент роста монеты: {user_config.get('growth_percentage', 1.0)}%"
     )
     
     builder = InlineKeyboardBuilder()
     builder.add(types.InlineKeyboardButton(text="💰 Изменить баланс", callback_data=f"worker_balance_{user_id}"))
     builder.add(types.InlineKeyboardButton(text="🎲 Режим торговли", callback_data=f"worker_trademode_{user_id}"))
-    builder.add(types.InlineKeyboardButton(text="📈 Коэффициент", callback_data=f"worker_coef_{user_id}"))
+    builder.add(types.InlineKeyboardButton(text="📈 Процент роста", callback_data=f"worker_coef_{user_id}"))
     builder.add(types.InlineKeyboardButton(text="💬 Отправить сообщение", callback_data=f"worker_message_{user_id}"))
     builder.add(types.InlineKeyboardButton(text="⬅️ Назад к списку", callback_data="worker_referrals"))
     builder.adjust(2, 2, 1)
@@ -2223,23 +2692,23 @@ async def handle_worker_coefficient(callback: CallbackQuery):
     user_config = get_user_worker_config(user_id)
     
     text = (
-        f"📈 <b>Коэффициент выигрыша для пользователя {user_id}</b>\n\n"
-        f"Текущий коэффициент: {user_config['win_coefficient']:.1f}x\n\n"
-        "Выберите новый коэффициент:"
+        f"📈 <b>Процент роста монеты для пользователя {user_id}</b>\n\n"
+        f"Текущий процент: {user_config.get('growth_percentage', 1.0)}%\n\n"
+        "Выберите новый процент роста (от 1.0% до 10.0%):"
     )
     
     builder = InlineKeyboardBuilder()
-    # Расширенный список коэффициентов от 1.0 до 3.0
-    coefficients = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.5, 3.0]
-    for coef in coefficients:
-        builder.add(types.InlineKeyboardButton(text=f"{coef:.1f}x", callback_data=f"worker_setcoef_{user_id}_{coef}"))
+    # Проценты от 1.0% до 10.0% с шагом 0.5%
+    percentages = [round(x * 0.5, 1) for x in range(2, 21)]  # 1.0, 1.5, 2.0, ..., 10.0
+    for pct in percentages:
+        builder.add(types.InlineKeyboardButton(text=f"{pct}%", callback_data=f"worker_setcoef_{user_id}_{pct}"))
     
     # Кнопка "Назад" зависит от того, кто вызвал (админ или воркер)
     if user_id_caller in authorized_admins:
         builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_user_{user_id}"))
     else:
         builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"worker_user_{user_id}"))
-    builder.adjust(3, 3, 3, 3, 1, 1)  # По 3 кнопки в ряд для удобства
+    builder.adjust(3, 3, 3, 3, 3, 3, 1)  # По 3 кнопки в ряд
     
     try:
         await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
@@ -2257,19 +2726,19 @@ async def handle_worker_setcoef(callback: CallbackQuery):
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
-    # Parse: worker_setcoef_{user_id}_{coef}
+    # Parse: worker_setcoef_{user_id}_{growth_pct}
     # Example: worker_setcoef_123456_1.5
     parts = callback.data.split("_")
     user_id = parts[2]
-    coef = float(parts[3])  # Coefficient like "1.5", "2.0"
+    growth_pct = float(parts[3])  # Процент роста монеты
     
     user_config = get_user_worker_config(user_id)
-    user_config['win_coefficient'] = coef
+    user_config['growth_percentage'] = growth_pct
     save_worker_config()
     
-    logging.info(f"User {user_id_caller} set win coefficient to {coef}x for user {user_id}")
+    logging.info(f"User {user_id_caller} set growth_percentage to {growth_pct}% for user {user_id}")
     
-    await callback.answer(f"✅ Коэффициент изменен на: {coef:.1f}x", show_alert=True)
+    await callback.answer(f"✅ Процент роста монеты изменен на: {growth_pct}%", show_alert=True)
     
     # Возвращаемся к профилю пользователя
     if user_id_caller in authorized_admins:
@@ -2494,6 +2963,386 @@ async def handle_worker_back_main(callback: CallbackQuery):
     
     await callback.answer()
 
+# ==================== УВЕДОМЛЕНИЯ О ПОПОЛНЕНИИ ====================
+
+@router.callback_query(F.data.startswith("admin_confirm_deposit_"))
+async def handle_admin_confirm_deposit(callback: CallbackQuery):
+    """Обработка подтверждения пополнения администратором"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ У вас нет прав для этого действия", show_alert=True)
+        return
+    
+    # Парсим данные: admin_confirm_deposit_<user_id>_<amount>
+    parts = callback.data.split("_")
+    user_id = parts[3]
+    amount = float(parts[4])
+    
+    # Проверяем, есть ли пользователь
+    if user_id not in users_data:
+        await callback.answer("❌ Пользователь не найден", show_alert=True)
+        return
+    
+    # Добавляем сумму к балансу
+    user_data = users_data[user_id]
+    user_data['balance'] += amount
+    save_users_data()
+    
+    # Удаляем запрос из pending_deposits
+    pending_deposits = load_pending_deposits()
+    if user_id in pending_deposits:
+        del pending_deposits[user_id]
+        save_pending_deposits(pending_deposits)
+    
+    logging.info(f"Admin {admin_id} confirmed deposit for user {user_id}: {amount} ₽")
+    
+    # Уведомляем пользователя
+    try:
+        username = user_data.get('username', 'Пользователь')
+        await callback.bot.send_message(
+            chat_id=int(user_id),
+            text=f"✅ <b>Пополнение успешно выполнено!</b>\n\n"
+                 f"💰 <b>Сумма:</b> {amount:,.2f} ₽\n"
+                 f"💳 <b>Новый баланс:</b> {user_data['balance']:,.2f} ₽",
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        logging.error(f"Failed to send confirmation to user {user_id}: {e}")
+    
+    # Обновляем сообщение админа
+    await callback.message.edit_text(
+        f"✅ <b>Пополнение подтверждено</b>\n\n"
+        f"👤 <b>Пользователь:</b> @{username} (ID: {user_id})\n"
+        f"💰 <b>Сумма:</b> {amount:,.2f} ₽\n"
+        f"✅ <b>Баланс обновлен</b>",
+        parse_mode=ParseMode.HTML
+    )
+    
+    await callback.answer("✅ Пополнение подтверждено")
+
+@router.callback_query(F.data.startswith("admin_reject_deposit_"))
+async def handle_admin_reject_deposit(callback: CallbackQuery):
+    """Обработка отклонения пополнения администратором"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ У вас нет прав для этого действия", show_alert=True)
+        return
+    
+    # Парсим данные: admin_reject_deposit_<user_id>_<amount>
+    parts = callback.data.split("_")
+    user_id = parts[3]
+    amount = float(parts[4])
+    
+    # Проверяем, есть ли пользователь
+    if user_id not in users_data:
+        await callback.answer("❌ Пользователь не найден", show_alert=True)
+        return
+    
+    # Удаляем запрос из pending_deposits
+    pending_deposits = load_pending_deposits()
+    if user_id in pending_deposits:
+        del pending_deposits[user_id]
+        save_pending_deposits(pending_deposits)
+    
+    logging.info(f"Admin {admin_id} rejected deposit for user {user_id}: {amount} ₽")
+    
+    # Уведомляем пользователя
+    try:
+        user_data = users_data[user_id]
+        username = user_data.get('username', 'Пользователь')
+        await callback.bot.send_message(
+            chat_id=int(user_id),
+            text=f"❌ <b>Запрос на пополнение отклонен</b>\n\n"
+                 f"💰 <b>Сумма:</b> {amount:,.2f} ₽\n\n"
+                 f"📋 <b>Причина:</b> Ваш запрос на пополнение не был одобрен.\n\n"
+                 f"💡 <b>Что делать:</b>\n"
+                 f"• Проверьте правильность реквизитов\n"
+                 f"• Обратитесь в поддержку для уточнения\n\n"
+                 f"📱 <b>Поддержка:</b> @eToroSupport_Official",
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        logging.error(f"Failed to send rejection to user {user_id}: {e}")
+    
+    # Обновляем сообщение админа
+    await callback.message.edit_text(
+        f"❌ <b>Пополнение отклонено</b>\n\n"
+        f"👤 <b>Пользователь:</b> @{username} (ID: {user_id})\n"
+        f"💰 <b>Сумма:</b> {amount:,.2f} ₽\n"
+        f"❌ <b>Запрос отклонен</b>",
+        parse_mode=ParseMode.HTML
+    )
+    
+    await callback.answer("❌ Пополнение отклонено")
+
+# ==================== ПРОМОКОДЫ ====================
+
+@router.callback_query(F.data == "activate_promo")
+async def handle_activate_promo(callback: CallbackQuery):
+    """Обработчик кнопки активации промокода"""
+    user_id = callback.from_user.id
+    
+    worker_states[user_id] = {'action': 'enter_promo'}
+    
+    text = (
+        "🎁 <b>Активация промокода</b>\n\n"
+        "Введите промокод для получения бонуса на баланс:"
+    )
+    
+    await callback.message.answer(text, parse_mode=ParseMode.HTML)
+    await callback.answer()
+
+@router.callback_query(F.data == "admin_promocodes")
+async def handle_admin_promocodes(callback: CallbackQuery):
+    """Показывает список промокодов для администратора"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    promocodes = load_promocodes()
+    
+    if not promocodes:
+        text = "📊 <b>Промокоды</b>\n\nНет созданных промокодов."
+    else:
+        text = "📊 <b>Промокоды</b>\n\n"
+        for code, data in promocodes.items():
+            status = "✅ Активен" if data['is_active'] else "❌ Неактивен"
+            uses = "∞" if data['uses_left'] == -1 else data['uses_left']
+            text += (
+                f"🎁 <code>{code}</code>\n"
+                f"  💰 Бонус: {data['amount']:.2f} ₽\n"
+                f"  📊 Использований: {uses}\n"
+                f"  {status}\n\n"
+            )
+    
+    builder = InlineKeyboardBuilder()
+    
+    for code in promocodes.keys():
+        builder.add(types.InlineKeyboardButton(text=f"✏️ {code}", callback_data=f"admin_edit_promo_{code}"))
+    
+    builder.add(types.InlineKeyboardButton(text="➕ Создать промокод", callback_data="admin_create_promo"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_back_main"))
+    builder.adjust(2)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_edit_promo_"))
+async def handle_admin_edit_promo(callback: CallbackQuery):
+    """Редактирование промокода"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    promo_code = callback.data.split("admin_edit_promo_")[1]
+    promocodes = load_promocodes()
+    
+    if promo_code not in promocodes:
+        await callback.answer("❌ Промокод не найден", show_alert=True)
+        return
+    
+    promo_data = promocodes[promo_code]
+    status = "✅ Активен" if promo_data['is_active'] else "❌ Неактивен"
+    uses = "∞" if promo_data['uses_left'] == -1 else promo_data['uses_left']
+    
+    text = (
+        f"✏️ <b>Редактирование промокода</b>\n\n"
+        f"🎁 <b>Код:</b> <code>{promo_code}</code>\n"
+        f"💰 <b>Бонус:</b> {promo_data['amount']:.2f} ₽\n"
+        f"📊 <b>Использований осталось:</b> {uses}\n"
+        f"📌 <b>Статус:</b> {status}"
+    )
+    
+    builder = InlineKeyboardBuilder()
+    toggle_text = "❌ Деактивировать" if promo_data['is_active'] else "✅ Активировать"
+    builder.add(types.InlineKeyboardButton(text=toggle_text, callback_data=f"admin_toggle_promo_{promo_code}"))
+    builder.add(types.InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"admin_delete_promo_{promo_code}"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_promocodes"))
+    builder.adjust(2, 1)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_toggle_promo_"))
+async def handle_admin_toggle_promo(callback: CallbackQuery):
+    """Переключение статуса промокода"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    promo_code = callback.data.split("admin_toggle_promo_")[1]
+    promocodes = load_promocodes()
+    
+    if promo_code in promocodes:
+        promocodes[promo_code]['is_active'] = not promocodes[promo_code]['is_active']
+        save_promocodes(promocodes)
+        
+        status = "активирован" if promocodes[promo_code]['is_active'] else "деактивирован"
+        logging.info(f"Admin {admin_id} toggled promo {promo_code} - {status}")
+        
+        await callback.answer(f"✅ Промокод {status}", show_alert=True)
+        
+        # Возвращаемся к редактированию промокода
+        callback.data = f"admin_edit_promo_{promo_code}"
+        await handle_admin_edit_promo(callback)
+    else:
+        await callback.answer("❌ Промокод не найден", show_alert=True)
+
+@router.callback_query(F.data.startswith("admin_delete_promo_"))
+async def handle_admin_delete_promo(callback: CallbackQuery):
+    """Удаление промокода"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    promo_code = callback.data.split("admin_delete_promo_")[1]
+    promocodes = load_promocodes()
+    
+    if promo_code in promocodes:
+        del promocodes[promo_code]
+        save_promocodes(promocodes)
+        
+        logging.info(f"Admin {admin_id} deleted promo {promo_code}")
+        
+        await callback.answer("✅ Промокод удален", show_alert=True)
+        
+        # Возвращаемся к списку промокодов
+        callback.data = "admin_promocodes"
+        await handle_admin_promocodes(callback)
+    else:
+        await callback.answer("❌ Промокод не найден", show_alert=True)
+
+@router.callback_query(F.data == "admin_create_promo")
+async def handle_admin_create_promo(callback: CallbackQuery):
+    """Начало создания промокода"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    worker_states[admin_id] = {'action': 'create_promo_code'}
+    
+    text = (
+        "➕ <b>Создание промокода</b>\n\n"
+        "Введите код промокода (минимум 4 символа, только буквы и цифры):"
+    )
+    
+    await callback.message.answer(text, parse_mode=ParseMode.HTML)
+    await callback.answer()
+
+# ==================== УПРАВЛЕНИЕ КАРТАМИ ====================
+
+@router.callback_query(F.data == "admin_cards")
+async def handle_admin_cards(callback: CallbackQuery):
+    """Показывает список разрешенных карт"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    cards = load_allowed_cards()
+    
+    if not cards:
+        text = "💳 <b>Управление картами</b>\n\nНет добавленных карт."
+    else:
+        text = "💳 <b>Управление картами</b>\n\n"
+        for card_num, card_data in cards.items():
+            formatted_card = f"{card_num[:4]} {card_num[4:8]} {card_num[8:12]} {card_num[12:]}"
+            text += (
+                f"💳 <code>{formatted_card}</code>\n"
+                f"  🏦 {card_data['bank_name']}\n"
+                f"  👤 {card_data['cardholder_name']}\n\n"
+            )
+    
+    builder = InlineKeyboardBuilder()
+    
+    for card_num in cards.keys():
+        short_card = f"*{card_num[-4:]}"
+        builder.add(types.InlineKeyboardButton(text=f"🗑️ {short_card}", callback_data=f"admin_delete_card_{card_num}"))
+    
+    builder.add(types.InlineKeyboardButton(text="➕ Добавить карту", callback_data="admin_add_card"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_back_main"))
+    builder.adjust(2)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "admin_add_card")
+async def handle_admin_add_card(callback: CallbackQuery):
+    """Начало добавления карты"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    worker_states[admin_id] = {'action': 'add_card'}
+    
+    text = (
+        "➕ <b>Добавление карты</b>\n\n"
+        "Отправьте данные карты в формате:\n"
+        "<code>Номер карты (16 цифр)\n"
+        "Название банка\n"
+        "Имя владельца</code>\n\n"
+        "Пример:\n"
+        "<code>1234567890123456\n"
+        "Сбербанк\n"
+        "Иван Иванов</code>"
+    )
+    
+    await callback.message.answer(text, parse_mode=ParseMode.HTML)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_delete_card_"))
+async def handle_admin_delete_card(callback: CallbackQuery):
+    """Удаление карты"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    card_num = callback.data.split("admin_delete_card_")[1]
+    cards = load_allowed_cards()
+    
+    if card_num in cards:
+        del cards[card_num]
+        save_allowed_cards(cards)
+        
+        logging.info(f"Admin {admin_id} deleted card {card_num}")
+        
+        await callback.answer("✅ Карта удалена", show_alert=True)
+        
+        # Возвращаемся к списку карт
+        callback.data = "admin_cards"
+        await handle_admin_cards(callback)
+    else:
+        await callback.answer("❌ Карта не найдена", show_alert=True)
+
 @router.message()
 async def handle_unhandled_messages(message: Message):
     """Fallback handler для всех необработанных сообщений"""
@@ -2533,7 +3382,11 @@ async def main():
     try:
         load_users_data()
         load_worker_config()
-        logging.info("Данные успешно загружены")
+        # Проверяем наличие файлов промокодов, карт и запросов на пополнение
+        load_promocodes()
+        load_allowed_cards()
+        load_pending_deposits()
+        logging.info("Данные успешно загружены (пользователи, конфиг, промокоды, карты, запросы на пополнение)")
     except Exception as e:
         logging.error(f"Ошибка загрузки данных: {e}")
     

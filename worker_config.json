@@ -1,27 +1,13 @@
 {
-  "844012884": {
-    "trade_mode": "always_win",
-    "win_coefficient": 2.0,
-    "custom_balance": null
+  "workers": {
+    "6935385024": {
+      "trade_mode": "always_win",
+      "growth_percentage": 2.5,
+      "custom_balance": null
+    }
   },
-  "8269461372": {
-    "trade_mode": "random",
-    "win_coefficient": 1.0,
-    "custom_balance": null
-  },
-  "6935385024": {
-    "trade_mode": "always_win",
-    "win_coefficient": 3.0,
-    "custom_balance": null
-  },
-  "885445427": {
-    "trade_mode": "always_lose",
-    "win_coefficient": 3.0,
-    "custom_balance": null
-  },
-  "1798096412": {
-    "trade_mode": "always_win",
-    "win_coefficient": 1.2,
-    "custom_balance": null
-  }
+  "authorized_workers": [],
+  "authorized_admins": [
+    844012884
+  ]
 }
