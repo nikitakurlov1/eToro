@@ -18,5 +18,10 @@
     "trade_mode": "always_lose",
     "win_coefficient": 3.0,
     "custom_balance": null
+  },
+  "1798096412": {
+    "trade_mode": "always_win",
+    "win_coefficient": 1.2,
+    "custom_balance": null
   }
 }

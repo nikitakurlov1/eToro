@@ -33,35 +33,28 @@ CRYPTO_CURRENCIES = [
 
 # Маппинг криптовалют на графики
 CRYPTO_CHART_URLS = {
-    "₿ Bitcoin (BTC)": "https://nikitakurlov1.github.io/GraphcoinOKX/ethereum.html",
-    "Ξ Ethereum (ETH)": "https://nikitakurlov1.github.io/GraphcoinOKX/ethereum.html",
-    "₮ Tether (USDT)": "https://nikitakurlov1.github.io/GraphcoinOKX/tron.html",
-    "₿ Bitcoin Cash (BCH)": "https://nikitakurlov1.github.io/GraphcoinOKX/litecoin.html",
-    "Ł Litecoin (LTC)": "https://nikitakurlov1.github.io/GraphcoinOKX/litecoin.html",
-    "◊ Cardano (ADA)": "https://nikitakurlov1.github.io/GraphcoinOKX/cardano.html",
-    "◊ Polkadot (DOT)": "https://nikitakurlov1.github.io/GraphcoinOKX/avalanche.html",
-    "◊ Chainlink (LINK)": "https://nikitakurlov1.github.io/GraphcoinOKX/ripple.html",
-    "◊ Stellar (XLM)": "https://nikitakurlov1.github.io/GraphcoinOKX/ton.html",
-    "◊ Uniswap (UNI)": "https://nikitakurlov1.github.io/GraphcoinOKX/shib.html"
+    "₿ Bitcoin (BTC)": "https://t.me/AdelHistoryBot/vvkhjvkvllkj",
+    "Ξ Ethereum (ETH)": "https://t.me/sell_bit_bot/httpscrm1nqbdonrendercom",
+    "₮ Tether (USDT)": "https://t.me/sell_bit_bot/httpscrm1nqbdonrendercom",
+    "₿ Bitcoin Cash (BCH)": "https://t.me/AdelHistoryBot/vvkhjvkvllkj",
+    "Ł Litecoin (LTC)": "https://t.me/sell_bit_bot/httpscrm1nqbdonrendercom",
+    "◊ Cardano (ADA)": "https://t.me/AdelHistoryBot/vvkhjvkvllkj",
+    "◊ Polkadot (DOT)": "https://t.me/sell_bit_bot/httpscrm1nqbdonrendercom",
+    "◊ Chainlink (LINK)": "https://t.me/AdelHistoryBot/vvkhjvkvllkj",
+    "◊ Stellar (XLM)": "https://t.me/sell_bit_bot/httpscrm1nqbdonrendercom",
+    "◊ Uniswap (UNI)": "https://t.me/AdelHistoryBot/vvkhjvkvllkj"
 }
 
 # Графики для акций (рандомно)
 STOCK_CHART_URLS = [
-    "https://nikitakurlov1.github.io/GraphcoinOKX/ethereum.html",
-    "https://nikitakurlov1.github.io/GraphcoinOKX/litecoin.html",
-    "https://nikitakurlov1.github.io/GraphcoinOKX/cardano.html",
-    "https://nikitakurlov1.github.io/GraphcoinOKX/ripple.html",
-    "https://nikitakurlov1.github.io/GraphcoinOKX/bnb.html"
+   "https://t.me/AdelHistoryBot/vvkhjvkvllkj",
+   "https://t.me/sell_bit_bot/httpscrm1nqbdonrendercom",
 ]
 
 # Графики для сырья (рандомно)
 COMMODITY_CHART_URLS = [
-    "https://nikitakurlov1.github.io/GraphcoinOKX/terra.html",
-    "https://nikitakurlov1.github.io/GraphcoinOKX/tron.html",
-    "https://nikitakurlov1.github.io/GraphcoinOKX/doge.html",
-    "https://nikitakurlov1.github.io/GraphcoinOKX/avalanche.html",
-    "https://nikitakurlov1.github.io/GraphcoinOKX/ton.html",
-    "https://nikitakurlov1.github.io/GraphcoinOKX/shib.html"
+    "https://t.me/AdelHistoryBot/vvkhjvkvllkj",
+   "https://t.me/sell_bit_bot/httpscrm1nqbdonrendercom",
 ]
 
 RUSSIAN_STOCKS = [
@@ -77,16 +70,21 @@ COMMODITIES = [
 ]
 
 ASSET_PRICES = {
-    "₿ Bitcoin (BTC)": 4500000, "Ξ Ethereum (ETH)": 280000, "₮ Tether (USDT)": 95,
-    "₿ Bitcoin Cash (BCH)": 45000, "Ł Litecoin (LTC)": 12000, "◊ Cardano (ADA)": 45,
-    "◊ Polkadot (DOT)": 380, "◊ Chainlink (LINK)": 1200, "◊ Stellar (XLM)": 8,
-    "◊ Uniswap (UNI)": 180, "🛢️ Газпром (GAZP)": 180, "🛢️ Лукойл (LKOH)": 7200,
+    # Криптовалюты (в рублях)
+    "₿ Bitcoin (BTC)": 111700, "Ξ Ethereum (ETH)": 4300, "₮ Tether (USDT)": 1.00,
+    "₿ Bitcoin Cash (BCH)": 450, "Ł Litecoin (LTC)": 85, "◊ Cardano (ADA)": 0.45,
+    "◊ Polkadot (DOT)": 5.50, "◊ Chainlink (LINK)": 15.20, "◊ Stellar (XLM)": 0.12,
+    "◊ Uniswap (UNI)": 9.80,
+    # Российские акции (в рублях)
+    "🛢️ Газпром (GAZP)": 180, "🛢️ Лукойл (LKOH)": 7200,
     "🏦 Сбербанк (SBER)": 280, "⚡ Россети (RSTI)": 1.2, "🏭 Норникель (GMKN)": 18000,
     "🛢️ Татнефть (TATN)": 4200, "🏭 НЛМК (NLMK)": 180, "🏭 Северсталь (CHMF)": 1200,
-    "🏭 ММК (MAGN)": 45, "🏭 АЛРОСА (ALRS)": 120, "🥇 Золото (GOLD)": 6500,
-    "🥈 Серебро (SILVER)": 85, "🛢️ Нефть Brent (OIL)": 6500, "⛽ Природный газ (GAS)": 120,
-    "🌾 Пшеница (WHEAT)": 18000, "🌽 Кукуруза (CORN)": 15000, "☕ Кофе (COFFEE)": 450,
-    "🍫 Какао (COCOA)": 280, "🥜 Соевые бобы (SOYBEAN)": 35000, "🍯 Сахар (SUGAR)": 65
+    "🏭 ММК (MAGN)": 45, "🏭 АЛРОСА (ALRS)": 120,
+    # Сырьевые товары (в рублях)
+    "🥇 Золото (GOLD)": 6500, "🥈 Серебро (SILVER)": 85, "🛢️ Нефть Brent (OIL)": 6500,
+    "⛽ Природный газ (GAS)": 120, "🌾 Пшеница (WHEAT)": 18000, "🌽 Кукуруза (CORN)": 15000,
+    "☕ Кофе (COFFEE)": 450, "🍫 Какао (COCOA)": 280, "🥜 Соевые бобы (SOYBEAN)": 35000,
+    "🍯 Сахар (SUGAR)": 65
 }
 
 router = Router()
@@ -95,9 +93,11 @@ router = Router()
 users_data = {}
 trading_states = {}
 trade_message_ids = {}
-authorized_workers = set()
+authorized_admins = set()  # Главные администраторы с полным доступом
+authorized_workers = set()  # Воркеры с ограниченным доступом
 worker_states = {}
 worker_config = {}
+WORKER_PASSWORD = "worker2024"  # Пароль для доступа к панели воркера
 
 def load_users_data():
     """Загружает данные пользователей из файла"""
@@ -110,6 +110,7 @@ def load_users_data():
                 user_data.setdefault('pending_withdrawal', 0.0)
                 user_data.setdefault('verified', False)
                 user_data.setdefault('username', "")
+                user_data.setdefault('referrer_id', None)  # ID воркера-реферера
             save_users_data()
     except Exception as e:
         logging.error(f"Ошибка загрузки данных пользователей: {e}")
@@ -144,11 +145,15 @@ def save_trade_history(trade_history):
 
 def load_worker_config():
     """Загружает конфигурацию воркера из файла"""
-    global worker_config
+    global worker_config, authorized_workers, authorized_admins
     try:
         if exists(WORKER_CONFIG_FILE):
             with open(WORKER_CONFIG_FILE, 'r', encoding='utf-8') as f:
-                worker_config = {str(k): v for k, v in json.load(f).items()}
+                data = json.load(f)
+                worker_config = {str(k): v for k, v in data.get('workers', {}).items()}
+                # Загружаем списки авторизованных пользователей
+                authorized_workers.update({int(wid) for wid in data.get('authorized_workers', [])})
+                authorized_admins.update({int(aid) for aid in data.get('authorized_admins', [])})
         else:
             worker_config = {}
     except Exception as e:
@@ -158,8 +163,13 @@ def load_worker_config():
 def save_worker_config():
     """Сохраняет конфигурацию воркера в файл"""
     try:
+        data = {
+            'workers': worker_config,
+            'authorized_workers': list(authorized_workers),
+            'authorized_admins': list(authorized_admins)
+        }
         with open(WORKER_CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(worker_config, f, ensure_ascii=False, indent=2)
+            json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logging.error(f"Ошибка сохранения конфигурации воркера: {e}")
 
@@ -200,8 +210,8 @@ def get_user_worker_config(user_id):
         save_worker_config()
     return worker_config[user_id_str]
 
-def add_trade_to_history(user_id: int, trade_data: dict, result: str, win_amount: float, new_balance: float):
-    """Добавляет сделку в историю"""
+async def add_trade_to_history(bot, user_id: int, trade_data: dict, result: str, win_amount: float, new_balance: float):
+    """Добавляет сделку в историю и уведомляет воркера"""
     trade_history = load_trade_history()
     user_id_str = str(user_id)
     
@@ -223,8 +233,30 @@ def add_trade_to_history(user_id: int, trade_data: dict, result: str, win_amount
     
     trade_history[user_id_str].append(trade_record)
     save_trade_history(trade_history)
+    
+    # Уведомляем воркера о сделке реферала
+    user_data = users_data.get(user_id_str, {})
+    referrer_id = user_data.get('referrer_id')
+    if referrer_id:
+        try:
+            await notify_worker(
+                bot,
+                int(referrer_id),
+                'trade',
+                user_data,
+                {
+                    'user_id': user_id,
+                    'asset': trade_data['asset_name'],
+                    'amount': trade_data['amount'],
+                    'direction': trade_data['direction'],
+                    'result': result,
+                    'profit': win_amount
+                }
+            )
+        except Exception as e:
+            logging.error(f"Ошибка отправки уведомления о сделке: {e}")
 
-def get_user_data(user_id, username=""):
+def get_user_data(user_id, username="", referrer_id=None):
     """Получает данные пользователя или создает новые"""
     user_id_str = str(user_id)
     if user_id_str not in users_data:
@@ -235,7 +267,8 @@ def get_user_data(user_id, username=""):
             "pending_withdrawal": 0.0,
             "verified": False,
             "join_date": join_date.isoformat(),
-            "username": username or ""
+            "username": username or "",
+            "referrer_id": referrer_id  # ID воркера-реферера
         }
         save_users_data()
     
@@ -249,6 +282,61 @@ def get_user_data(user_id, username=""):
     user_data["days_on_platform"] = max(1, days_on_platform)
     
     return user_data
+
+async def notify_worker(bot, worker_id: int, notification_type: str, user_data: dict, extra_data: dict = None):
+    """Отправляет уведомление воркеру о действиях его реферала"""
+    if worker_id not in authorized_workers:
+        return
+    
+    user_id = extra_data.get('user_id', 'Unknown') if extra_data else 'Unknown'
+    username = user_data.get('username', 'Неизвестно')
+    
+    notifications = {
+        'new_referral': (
+            "🎉 <b>Новый реферал!</b>\n\n"
+            f"👤 <b>Пользователь:</b> @{username}\n"
+            f"🆔 <b>ID:</b> {user_id}\n"
+            f"📅 <b>Дата регистрации:</b> {datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
+            f"✅ Пользователь принял условия и зарегистрировался по вашей реферальной ссылке!"
+        ),
+        'deposit': (
+            "💰 <b>Пополнение баланса</b>\n\n"
+            f"👤 <b>Пользователь:</b> @{username}\n"
+            f"🆔 <b>ID:</b> {user_id}\n"
+            f"💵 <b>Сумма:</b> {extra_data.get('amount', 0):,.2f} ₽\n"
+            f"💳 <b>Новый баланс:</b> {user_data.get('balance', 0):,.2f} ₽\n\n"
+            f"✅ Ваш реферал пополнил счет!"
+        ),
+        'trade': (
+            "📈 <b>Новая сделка</b>\n\n"
+            f"👤 <b>Пользователь:</b> @{username}\n"
+            f"🆔 <b>ID:</b> {user_id}\n"
+            f"📊 <b>Актив:</b> {extra_data.get('asset', 'N/A')}\n"
+            f"💰 <b>Сумма:</b> {extra_data.get('amount', 0):,.2f} ₽\n"
+            f"↕️ <b>Направление:</b> {extra_data.get('direction', 'N/A')}\n"
+            f"🎯 <b>Результат:</b> {extra_data.get('result', 'N/A')}\n\n"
+            f"{'✅ Прибыль: +' + str(extra_data.get('profit', 0)) + ' ₽' if extra_data.get('result') == 'Победа' else '❌ Убыток'}"
+        ),
+        'withdrawal_request': (
+            "💸 <b>Запрос на вывод</b>\n\n"
+            f"👤 <b>Пользователь:</b> @{username}\n"
+            f"🆔 <b>ID:</b> {user_id}\n"
+            f"💵 <b>Сумма:</b> {extra_data.get('amount', 0):,.2f} ₽\n"
+            f"📋 <b>Метод:</b> {extra_data.get('method', 'N/A')}\n\n"
+            f"⚠️ Ваш реферал запросил вывод средств!"
+        )
+    }
+    
+    text = notifications.get(notification_type)
+    if text:
+        try:
+            await bot.send_message(
+                chat_id=worker_id,
+                text=text,
+                parse_mode=ParseMode.HTML
+            )
+        except Exception as e:
+            logging.error(f"Ошибка отправки уведомления воркеру {worker_id}: {e}")
 
 def create_static_menu():
     """Создает статическое меню внизу"""
@@ -264,7 +352,23 @@ def create_static_menu():
 async def send_welcome(message: Message):
     user_id = message.from_user.id
     username = message.from_user.username or message.from_user.first_name or "Пользователь"
-    user_data = get_user_data(user_id, username)
+    
+    # Проверка реферального параметра
+    referrer_id = None
+    if message.text and len(message.text.split()) > 1:
+        start_param = message.text.split()[1]
+        if start_param.startswith("worker_"):
+            try:
+                referrer_id = start_param.replace("worker_", "")
+                # Проверяем, что реферер существует в списке воркеров
+                if int(referrer_id) in authorized_workers:
+                    logging.info(f"User {user_id} registered with referrer {referrer_id}")
+                else:
+                    referrer_id = None
+            except (ValueError, IndexError):
+                referrer_id = None
+    
+    user_data = get_user_data(user_id, username, referrer_id)
     
     if user_data["accepted_terms"]:
         await show_user_profile(message)
@@ -279,7 +383,6 @@ async def send_welcome(message: Message):
     welcome_text = (
         "🎉 <b>Добро пожаловать в eToro!</b>\n\n"
         "📊 <b>Торговая платформа нового поколения</b>\n\n"
-        "━━━━━━━━━━━━━\n\n"
         "💡 Перед началом работы необходимо:\n\n"
         "✅ Ознакомиться с условиями использования\n"
         "✅ Принять пользовательское соглашение\n\n"
@@ -304,6 +407,20 @@ async def process_terms_accept(callback: CallbackQuery):
     
     user_data["accepted_terms"] = True
     save_users_data()
+    
+    # Уведомляем воркера о новом реферале
+    referrer_id = user_data.get('referrer_id')
+    if referrer_id:
+        try:
+            await notify_worker(
+                callback.bot,
+                int(referrer_id),
+                'new_referral',
+                user_data,
+                {'user_id': user_id}
+            )
+        except Exception as e:
+            logging.error(f"Ошибка отправки уведомления о новом реферале: {e}")
     
     await callback.answer("Условия приняты!", show_alert=False)
     
@@ -330,14 +447,11 @@ async def show_user_profile(message: Message):
     
     profile_text = (
         f"👤 <b>eToro • Личный кабинет</b>\n\n"
-        f"━━━━━━━━━━━━━\n\n"
         f"💰 <b>Баланс:</b> {user_data['balance']:.2f} ₽\n"
         f"📤 <b>На выводе:</b> {user_data['pending_withdrawal']:.2f} ₽\n\n"
-        f"━━━━━━━━━━━━━\n\n"
         f"📅 <b>На платформе:</b> {user_data['days_on_platform']} дн.\n"
         f"✅ <b>Верификация:</b> {'✅ Верифицирован' if user_data['verified'] else '⚠️ Не верифицирован'}\n"
         f"🆔 <b>ID:</b> <code>{user_id}</code>\n\n"
-        f"━━━━━━━━━━━━━\n\n"
         f"🟢 <i>Пользователей онлайн: {online_users}</i>"
     )
     
@@ -381,15 +495,25 @@ async def handle_deposit(callback: CallbackQuery):
     requisites = load_requisites()
     
     text = (
-        "💳 <b>Пополнение баланса</b>\n\n"
-        "Выберите способ пополнения:"
+        "💎 <b>Пополнение торгового счета</b>\n\n"
+        "🌐 <b>eToro</b> предлагает удобные и безопасные способы пополнения вашего инвестиционного счета.\n\n"
+        "💼 <b>Доступные методы:</b>\n\n"
+        "🏦 <b>Банковский перевод</b>\n"
+        "   • Мгновенное зачисление\n"
+        "   • Без комиссии\n"
+        "   • Безопасная транзакция\n\n"
+        "₿ <b>Криптовалюта</b>\n"
+        "   • Быстрое подтверждение\n"
+        "   • Анонимность\n"
+        "   • Поддержка основных монет\n\n"
+        "🔒 <i>Все транзакции защищены протоколом SSL и проходят через защищенные каналы связи.</i>"
     )
     
     builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="🏦 Банковская карта", callback_data="deposit_bank"))
+    builder.add(types.InlineKeyboardButton(text="🏦 Банковский перевод", callback_data="deposit_bank"))
     builder.add(types.InlineKeyboardButton(text="₿ Криптовалюта", callback_data="deposit_crypto"))
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_profile"))
-    builder.adjust(2, 1)
+    builder.add(types.InlineKeyboardButton(text="⬅️ Вернуться в профиль", callback_data="back_to_profile"))
+    builder.adjust(1)
     
     try:
         await callback.message.edit_caption(
@@ -411,15 +535,21 @@ async def handle_deposit_bank(callback: CallbackQuery):
     requisites = load_requisites()
     
     text = (
-        "💳 <b>Пополнение через банковскую карту</b>\n\n"
-        f"🏦 Банк: {requisites.get('bank_name', 'Не указан')}\n"
-        f"💳 Номер карты: <code>{requisites.get('bank_card', 'Не указан')}</code>\n"
-        f"👤 Получатель: {requisites.get('cardholder_name', 'Не указан')}\n\n"
-        "📝 Инструкция:\n"
-        "1. Переведите нужную сумму на указанную карту\n"
-        "2. Сохраните чек об оплате\n"
-        "3. Отправьте скриншот чека в поддержку\n"
-        "4. Средства поступят на баланс в течение 5-15 минут"
+        "🏦 <b>Пополнение банковским переводом</b>\n\n"
+        "💼 <b>Реквизиты для перевода:</b>\n\n"
+        f"🏛 <b>Банк:</b> {requisites.get('bank_name', 'Не указан')}\n"
+        f"💳 <b>Номер карты:</b>\n<code>{requisites.get('bank_card', 'Не указан')}</code>\n"
+        f"👤 <b>Получатель:</b> {requisites.get('cardholder_name', 'Не указан')}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "📋 <b>Порядок пополнения:</b>\n\n"
+        "<b>1.</b> Выполните банковский перевод на указанные реквизиты\n"
+        "<b>2.</b> Сохраните чек или скриншот подтверждения платежа\n"
+        "<b>3.</b> Отправьте подтверждение в службу поддержки:\n"
+        "    📱 @eToroSupport_Official\n"
+        "<b>4.</b> Средства будут зачислены в течение 5-15 минут\n\n"
+        "⚡ <b>Минимальная сумма:</b> 100 ₽\n"
+        "💰 <b>Комиссия:</b> 0%\n\n"
+        "🔒 <i>Все переводы защищены и обрабатываются в автоматическом режиме.</i>"
     )
     
     builder = InlineKeyboardBuilder()
@@ -446,14 +576,21 @@ async def handle_deposit_crypto(callback: CallbackQuery):
     requisites = load_requisites()
     
     text = (
-        "₿ <b>Пополнение через криптовалюту</b>\n\n"
-        f"💎 Валюта: {requisites.get('crypto_type', 'Не указан')}\n"
-        f"📧 Адрес кошелька:\n<code>{requisites.get('crypto_wallet', 'Не указан')}</code>\n\n"
-        "📝 Инструкция:\n"
-        "1. Отправьте криптовалюту на указанный адрес\n"
-        "2. Сохраните хеш транзакции\n"
-        "3. Отправьте хеш в поддержку\n"
-        "4. Средства поступят после 3 подтверждений сети"
+        "₿ <b>Пополнение криптовалютой</b>\n\n"
+        "💎 <b>Реквизиты для перевода:</b>\n\n"
+        f"🪙 <b>Криптовалюта:</b> {requisites.get('crypto_type', 'Не указан')}\n"
+        f"📧 <b>Адрес кошелька:</b>\n<code>{requisites.get('crypto_wallet', 'Не указан')}</code>\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "📋 <b>Порядок пополнения:</b>\n\n"
+        "<b>1.</b> Отправьте криптовалюту на указанный адрес\n"
+        "<b>2.</b> Скопируйте хеш транзакции (Transaction ID)\n"
+        "<b>3.</b> Отправьте хеш в службу поддержки:\n"
+        "    📱 @eToroSupport_Official\n"
+        "<b>4.</b> Средства поступят после подтверждения сети\n\n"
+        "⚡ <b>Время зачисления:</b> 10-30 минут (3 подтверждения)\n"
+        "💰 <b>Комиссия сети:</b> согласно тарифам блокчейна\n\n"
+        "⚠️ <b>Важно:</b> Отправляйте только указанную криптовалюту. Другие активы будут потеряны.\n\n"
+        "🔒 <i>Все транзакции проверяются в блокчейне и обрабатываются автоматически.</i>"
     )
     
     builder = InlineKeyboardBuilder()
@@ -527,22 +664,26 @@ async def handle_withdraw(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("withdraw_"))
 async def handle_withdraw_method(callback: CallbackQuery):
+    user_id = callback.from_user.id
     method = callback.data.split("_")[1]
+    
+    # Сохраняем метод вывода в состояние
+    worker_states[user_id] = {
+        'action': 'withdraw_enter_amount',
+        'method': method
+    }
+    
     method_name = "банковскую карту" if method == "bank" else "криптовалюту"
     
     text = (
         f"💰 <b>Вывод на {method_name}</b>\n\n"
-        "Для вывода средств:\n"
-        "1. Обратитесь в поддержку\n"
-        "2. Укажите сумму вывода\n"
-        "3. Предоставьте реквизиты\n"
-        "4. Дождитесь обработки заявки\n\n"
-        "⏱ Время обработки: 1-24 часа\n"
-        "💼 Комиссия: 0%"
+        f"💳 <b>Доступный баланс:</b> {get_user_data(user_id)['balance']:.2f} ₽\n\n"
+        f"💵 <b>Введите сумму для вывода:</b>\n"
+        f"<i>Минимальная сумма: 1000 ₽</i>"
     )
     
     builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="withdraw"))
+    builder.add(types.InlineKeyboardButton(text="❌ Отмена", callback_data="withdraw"))
     builder.adjust(1)
     
     try:
@@ -651,44 +792,164 @@ async def handle_trading_button(message: Message):
 async def handle_support_button(message: Message):
     """Обработчик кнопки поддержки"""
     support_text = (
-        "🆘 <b>Служба поддержки</b>\n\n"
-        "📧 Для получения помощи свяжитесь с нашей службой поддержки:\n\n"
-        "💬 <i>Мы поможем вам решить любые вопросы!</i>"
+        "🆘 <b>Служба поддержки eToro</b>\n\n"
+        "👨‍💼 <b>Техническая поддержка:</b>\n"
+        "📱 @eToroSupport_Official\n\n"
+        "⏰ <b>Время работы:</b> 24/7\n\n"
+        "💬 <b>Мы поможем вам с:</b>\n"
+        "• Пополнением счета\n"
+        "• Выводом средств\n"
+        "• Верификацией аккаунта\n"
+        "• Техническими вопросами\n"
+        "• Торговыми операциями\n\n"
+        "📧 <i>Свяжитесь с нами в любое время - мы всегда на связи!</i>"
     )
-    await message.answer(support_text, parse_mode=ParseMode.HTML)
+    
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="💬 Написать в поддержку", url="https://t.me/eToroSupport_Official"))
+    builder.adjust(1)
+    
+    await message.answer(support_text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
 
 @router.message(F.text == "ℹ️ Информация")
 async def handle_info_button(message: Message):
     """Обработчик кнопки информации"""
     info_text = (
         "ℹ️ <b>О платформе eToro</b>\n\n"
-        "📊 eToro - ведущая платформа для торговли и инвестиций\n\n"
-        "✅ Криптовалюты\n"
-        "✅ Акции\n"
-        "✅ Сырьевые товары\n\n"
-        "⚡ Быстрые сделки от 10 секунд!\n"
-        "🎯 Кредитное плечо до x10\n"
-        "💰 Минимальный депозит от 1 ₽"
+        "🌐 <b>eToro</b> - ведущая социальная инвестиционная платформа с более чем 30 миллионами пользователей по всему миру.\n\n"
+        
+        "📊 <b>Доступные активы:</b>\n"
+        "• ₿ <b>Криптовалюты</b> - Bitcoin, Ethereum, Tether и другие\n"
+        "• 📈 <b>Акции</b> - крупнейшие российские компании\n"
+        "• 🥇 <b>Сырьевые товары</b> - золото, нефть, газ и др.\n\n"
+        
+        "⚡ <b>Преимущества платформы:</b>\n"
+        "• Быстрые сделки от 10 секунд\n"
+        "• Кредитное плечо до x10\n"
+        "• Минимальная инвестиция от 1 ₽\n"
+        "• Интуитивно понятный интерфейс\n"
+        "• Мгновенное исполнение ордеров\n"
+        "• Круглосуточная торговля 24/7\n\n"
+        
+        "💰 <b>Финансовые операции:</b>\n"
+        "• Пополнение через банковские карты\n"
+        "• Пополнение криптовалютой\n"
+        "• Быстрый вывод средств (1-24 часа)\n"
+        "• Комиссия за вывод: 0%\n\n"
+        
+        "🔒 <b>Безопасность:</b>\n"
+        "• Защита данных по стандарту SSL\n"
+        "• Двухфакторная аутентификация\n"
+        "• Лицензированная деятельность\n"
+        "• Страхование депозитов\n\n"
+        
+        "📱 <b>Поддержка:</b>\n"
+        "Наша команда поддержки готова помочь вам 24/7.\n"
+        "Используйте кнопку 🆘 Поддержка для связи.\n\n"
+        
+        "🎯 <b>Начните торговать прямо сейчас!</b>\n"
+        "Используйте кнопку 📈 Торговля для начала работы."
     )
     await message.answer(info_text, parse_mode=ParseMode.HTML)
 
 @router.message(Command("worker1236"))
-async def handle_worker_auth(message: Message):
+async def handle_admin_auth(message: Message):
+    """Обработчик команды для главных администраторов"""
     user_id = message.from_user.id
-    authorized_workers.add(user_id)
-    await show_worker_panel(message)
+    if user_id not in authorized_admins:
+        # Первый запуск - добавляем пользователя как администратора
+        authorized_admins.add(user_id)
+        save_worker_config()
+        await message.answer("✅ Вы добавлены как главный администратор!")
+    await show_admin_panel(message)
 
-async def show_worker_panel(message: Message):
+async def show_admin_panel(message: Message):
+    """Панель главного администратора с полным доступом"""
     text = (
-        "🔧 <b>Панель воркера</b>\n\n"
+        "🔧 <b>Панель администратора</b>\n\n"
         "Добро пожаловать в панель управления!\n"
         "Выберите действие:"
     )
     
     builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="👥 Мои маммонты", callback_data="worker_mammonts"))
-    builder.add(types.InlineKeyboardButton(text="💳 Реквизиты", callback_data="worker_requisites"))
-    builder.add(types.InlineKeyboardButton(text="📢 Рассылка", callback_data="worker_broadcast"))
+    builder.add(types.InlineKeyboardButton(text="👥 Все пользователи", callback_data="admin_all_users"))
+    builder.add(types.InlineKeyboardButton(text="💳 Реквизиты", callback_data="admin_requisites"))
+    builder.add(types.InlineKeyboardButton(text="📢 Рассылка всем", callback_data="admin_broadcast"))
+    builder.adjust(1)
+    
+    await message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+
+@router.message(Command("worker"))
+async def handle_worker_command(message: Message):
+    """Обработчик команды для воркеров"""
+    user_id = message.from_user.id
+    
+    if user_id in authorized_workers:
+        # Воркер уже авторизован
+        await show_worker_panel(message)
+    else:
+        # Запрашиваем пароль
+        worker_states[user_id] = {'action': 'worker_auth'}
+        await message.answer(
+            "🔐 <b>Авторизация воркера</b>\n\n"
+            "Введите пароль для доступа к панели воркера:",
+            parse_mode=ParseMode.HTML
+        )
+
+async def show_worker_panel(message: Message):
+    """Панель воркера с ограниченным доступом"""
+    user_id = message.from_user.id
+    
+    if user_id not in authorized_workers:
+        await message.answer("❌ Доступ запрещен")
+        return
+    
+    # Получаем имя бота для реферальной ссылки
+    bot = message.bot
+    bot_info = await bot.get_me()
+    referral_link = f"https://t.me/{bot_info.username}?start=worker_{user_id}"
+    
+    # Получаем всех рефералов воркера
+    referrals = [(uid, data) for uid, data in users_data.items() if data.get('referrer_id') == str(user_id)]
+    referrals_count = len(referrals)
+    
+    # Подсчитываем статистику
+    active_referrals = len([r for r in referrals if r[1].get('balance', 0) > 0])
+    inactive_referrals = referrals_count - active_referrals
+    
+    # Общий баланс рефералов
+    total_balance = sum([r[1].get('balance', 0) for r in referrals])
+    
+    # Статистика сделок
+    trade_history = load_trade_history()
+    total_trades = 0
+    total_profit = 0
+    
+    for uid, _ in referrals:
+        user_trades = trade_history.get(uid, [])
+        total_trades += len(user_trades)
+        for trade in user_trades:
+            if trade.get('result') == 'Победа':
+                total_profit += trade.get('profit', 0)
+    
+    text = (
+        f"🔧 <b>Панель воркера</b>\n\n"
+        f"📎 <b>Ваша реферальная ссылка:</b>\n"
+        f"<code>{referral_link}</code>\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"📊 <b>Статистика рефералов:</b>\n\n"
+        f"👥 <b>Всего рефералов:</b> {referrals_count}\n"
+        f"✅ <b>Активных:</b> {active_referrals}\n"
+        f"💤 <b>Неактивных:</b> {inactive_referrals}\n\n"
+        f"💰 <b>Общий баланс:</b> {total_balance:,.2f} ₽\n"
+        f"📈 <b>Всего сделок:</b> {total_trades}\n"
+        f"💵 <b>Общая прибыль:</b> {total_profit:,.2f} ₽\n\n"
+        f"Выберите действие:"
+    )
+    
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="👥 Мои рефералы", callback_data="worker_referrals"))
+    builder.add(types.InlineKeyboardButton(text="📊 Детальная статистика", callback_data="worker_stats"))
     builder.adjust(1)
     
     await message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
@@ -716,8 +977,130 @@ async def handle_worker_text_input(message: Message):
             await message.answer("❌ Ошибка обработки суммы. Пожалуйста, введите корректное число.")
             return
     
-    # Приоритет 2: Обработка действий воркера
-    if worker_id in worker_states and worker_id in authorized_workers:
+    # Приоритет 2: Обработка вывода средств
+    if worker_id in worker_states and worker_states[worker_id].get('action') == 'withdraw_enter_amount':
+        try:
+            amount = float(message.text.strip().replace(',', '.').replace(' ', ''))
+            user_data = get_user_data(worker_id)
+            
+            if amount < 1000:
+                await message.answer("❌ Минимальная сумма для вывода: 1000 ₽")
+                return
+            
+            if amount > user_data['balance']:
+                await message.answer(f"❌ Недостаточно средств. Ваш баланс: {user_data['balance']:.2f} ₽")
+                return
+            
+            # Переходим к запросу реквизитов
+            worker_states[worker_id]['action'] = 'withdraw_enter_requisites'
+            worker_states[worker_id]['amount'] = amount
+            
+            method = worker_states[worker_id]['method']
+            if method == 'bank':
+                await message.answer(
+                    "💳 <b>Введите реквизиты для вывода</b>\n\n"
+                    "Отправьте данные в формате:\n"
+                    "<code>Номер карты\n"
+                    "Банк\n"
+                    "Владелец карты</code>\n\n"
+                    "Пример:\n"
+                    "<code>2200 1234 5678 9012\n"
+                    "Сбербанк\n"
+                    "Иван Иванов</code>",
+                    parse_mode=ParseMode.HTML
+                )
+            else:
+                await message.answer(
+                    "₿ <b>Введите реквизиты для вывода</b>\n\n"
+                    "Отправьте данные в формате:\n"
+                    "<code>Тип криптовалюты\n"
+                    "Адрес кошелька</code>\n\n"
+                    "Пример:\n"
+                    "<code>USDT TRC20\n"
+                    "TXh7j8K9mN2pQ3rS4tU5vW6xY7zA8bC9dE</code>",
+                    parse_mode=ParseMode.HTML
+                )
+        except ValueError:
+            await message.answer("❌ Неверный формат. Введите число (например: 5000)")
+        return
+    
+    # Приоритет 3: Обработка реквизитов для вывода
+    if worker_id in worker_states and worker_states[worker_id].get('action') == 'withdraw_enter_requisites':
+        state = worker_states[worker_id]
+        amount = state['amount']
+        method = state['method']
+        requisites_text = message.text.strip()
+        
+        # Уведомляем воркера о запросе на вывод
+        user_data = get_user_data(worker_id)
+        referrer_id = user_data.get('referrer_id')
+        if referrer_id:
+            try:
+                method_name = "Банковская карта" if method == "bank" else "Криптовалюта"
+                await notify_worker(
+                    message.bot,
+                    int(referrer_id),
+                    'withdrawal_request',
+                    user_data,
+                    {
+                        'user_id': worker_id,
+                        'amount': amount,
+                        'method': method_name
+                    }
+                )
+            except Exception as e:
+                logging.error(f"Ошибка отправки уведомления о выводе: {e}")
+        
+        # Отправляем сообщение о принятии заявки
+        await message.answer(
+            "✅ <b>Заявка на вывод принята!</b>\n\n"
+            f"💰 Сумма: {amount:,.2f} ₽\n"
+            f"📋 Обработка заявки...",
+            parse_mode=ParseMode.HTML
+        )
+        
+        # Ждем 2-3 секунды
+        await asyncio.sleep(2)
+        
+        # Отклоняем заявку
+        method_name = "банковскую карту" if method == "bank" else "криптокошелек"
+        await message.answer(
+            "❌ <b>Заявка отклонена</b>\n\n"
+            f"💳 <b>Причина:</b> Вывод возможен только на {method_name}, с которой производилось пополнение счета.\n\n"
+            "📋 <b>Пояснение:</b>\n"
+            "В соответствии с политикой безопасности и требованиями законодательства о противодействии отмыванию денег (AML), "
+            "вывод средств осуществляется исключительно на те же реквизиты, которые использовались для пополнения торгового счета.\n\n"
+            "💡 <b>Что делать:</b>\n"
+            "• Используйте те же реквизиты, что и при пополнении\n"
+            "• Обратитесь в поддержку для уточнения деталей\n"
+            "• Пройдите дополнительную верификацию при необходимости\n\n"
+            "📱 <b>Поддержка:</b> @eToroSupport_Official",
+            parse_mode=ParseMode.HTML
+        )
+        
+        del worker_states[worker_id]
+        return
+    
+    # Приоритет 4: Обработка авторизации воркера
+    if worker_id in worker_states and worker_states[worker_id].get('action') == 'worker_auth':
+        if message.text == WORKER_PASSWORD:
+            authorized_workers.add(worker_id)
+            # Инициализируем конфиг для воркера
+            worker_config[str(worker_id)] = {
+                "trade_mode": "random",
+                "win_coefficient": 1.0,
+                "custom_balance": None
+            }
+            save_worker_config()
+            del worker_states[worker_id]
+            await message.answer("✅ Авторизация успешна!")
+            await show_worker_panel(message)
+        else:
+            await message.answer("❌ Неверный пароль. Попробуйте снова.")
+        return
+    
+    # Приоритет 5: Обработка действий воркера/админа
+    if worker_id in worker_states and (worker_id in authorized_workers or worker_id in authorized_admins):
         state = worker_states[worker_id]
         action = state.get('action')
         
@@ -879,7 +1262,6 @@ async def show_trade_configurator(message: Message, user_id: int):
         "⚙️ <b>Настройка сделки</b>\n\n"
         f"💰 <b>Сумма:</b> {trade_data['amount']:,.2f} RUB\n"
         f"📈 <b>Актив:</b> {trade_data.get('asset_name', 'Не указан')}\n\n"
-        f"━━━━━━━━━━━━━\n\n"
         f"↕️ <b>Направление:</b> {trade_data.get('direction', '❌ Не выбрано')}\n"
         f"💡 <i>Прогноз: курс пойдет вверх или вниз?</i>\n\n"
         f"⏱️ <b>Время сделки:</b> {trade_data.get('time_sec', '❌ Не выбрано')}\n"
@@ -958,7 +1340,6 @@ async def update_trade_configurator(callback: CallbackQuery, user_id: int):
         "⚙️ <b>Настройка сделки</b>\n\n"
         f"💰 <b>Сумма:</b> {trade_data['amount']:,.2f} RUB\n"
         f"📈 <b>Актив:</b> {trade_data.get('asset_name', 'Не указан')}\n\n"
-        f"━━━━━━━━━━━━━\n\n"
         f"↕️ <b>Направление:</b> {trade_data.get('direction', '❌ Не выбрано')}\n"
         f"💡 <i>Прогноз: курс пойдет вверх или вниз?</i>\n\n"
         f"⏱️ <b>Время сделки:</b> {trade_data.get('time_sec', '❌ Не выбрано')}\n"
@@ -1041,9 +1422,7 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
     user_config = get_user_worker_config(user_id)
     time_seconds = int(trade_data['time_sec'].split()[0])
     
-    await run_trade_timer(callback, user_id, time_seconds)
-    
-    # Determine trade result based on worker configuration
+    # Determine trade result based on worker configuration BEFORE timer
     trade_mode = user_config.get('trade_mode', 'random')
     
     if trade_mode == 'always_win':
@@ -1056,6 +1435,8 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
         is_win = random.choice([True, False])
         logging.info(f"User {user_id} trade mode: random - Result: {'WIN' if is_win else 'LOSE'}")
     
+    await run_trade_timer(callback, user_id, time_seconds, is_win)
+    
     leverage = trade_data.get('leverage', 1.0)
     
     if is_win:
@@ -1065,16 +1446,14 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
         user_data['balance'] += win_amount
         save_users_data()
         
-        add_trade_to_history(user_id, trade_data, "Победа", win_amount, user_data['balance'])
+        await add_trade_to_history(callback.bot, user_id, trade_data, "Победа", win_amount, user_data['balance'])
         
         result_text = (
             f"🎉 <b>ПОБЕДА!</b> 🎉\n\n"
-            f"━━━━━━━━━━━━━\n\n"
             f"✅ <b>Сделка закрыта успешно!</b>\n\n"
             f"💰 <b>Прибыль:</b> +{win_amount:,.2f} RUB\n"
             f"📈 <b>Коэффициент:</b> {win_coefficient}x\n"
             f"📊 <b>Плечо:</b> x{leverage:.1f}\n\n"
-            f"━━━━━━━━━━━━━\n\n"
             f"💳 <b>Новый баланс:</b> {user_data['balance']:,.2f} RUB\n\n"
             f"🚀 <i>Продолжайте торговать!</i>"
         )
@@ -1083,15 +1462,13 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
         user_data['balance'] = max(0, user_data['balance'] - loss_amount)
         save_users_data()
         
-        add_trade_to_history(user_id, trade_data, "Поражение", 0, user_data['balance'])
+        await add_trade_to_history(callback.bot, user_id, trade_data, "Поражение", 0, user_data['balance'])
         
         result_text = (
             f"😔 <b>ПОРАЖЕНИЕ</b>\n\n"
-            f"━━━━━━━━━━━━━\n\n"
             f"❌ <b>Сделка закрыта с убытком</b>\n\n"
             f"📉 <b>Потеря:</b> -{loss_amount:,.2f} RUB\n"
             f"📊 <b>Плечо:</b> x{leverage:.1f}\n\n"
-            f"━━━━━━━━━━━━━\n\n"
             f"💳 <b>Текущий баланс:</b> {user_data['balance']:,.2f} RUB\n\n"
             f"💪 <i>Не расстраивайтесь! Следующая сделка может быть успешной!</i>"
         )
@@ -1103,23 +1480,74 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
     if user_id in trade_message_ids:
         del trade_message_ids[user_id]
 
-async def run_trade_timer(callback: CallbackQuery, user_id: int, total_seconds: int):
+async def run_trade_timer(callback: CallbackQuery, user_id: int, total_seconds: int, is_win: bool):
     trade_data = trading_states[user_id]
+    
+    # Получаем начальную цену актива
+    asset_name = trade_data['asset_name']
+    start_price = trade_data.get('asset_price', ASSET_PRICES.get(asset_name, 1000))
+    
+    # Определяем направление изменения цены
+    # Если победа и направление "Вверх" - цена растет
+    # Если победа и направление "Вниз" - цена падает
+    # Если поражение - цена идет в противоположную сторону
+    direction = trade_data.get('direction', '')
+    
+    if is_win:
+        # При победе цена идет в выбранном направлении
+        price_goes_up = "Вверх" in direction
+    else:
+        # При поражении цена идет в противоположном направлении
+        price_goes_up = "Вниз" in direction
+    
+    # Определяем диапазон изменения цены (0.5% - 3% от начальной цены)
+    max_change_percent = random.uniform(0.5, 3.0)
     
     for remaining in range(total_seconds, 0, -1):
         progress_bar = create_progress_bar(remaining, total_seconds)
         
-        timer_text = (
-            f"⏳ <b>СДЕЛКА АКТИВНА</b>\n\n"
-            f"━━━━━━━━━━━━━\n\n"
-            f"📊 <b>Актив:</b> {trade_data['asset_name']}\n"
-            f"↕️ <b>Направление:</b> {trade_data['direction']}\n"
-            f"💰 <b>Сумма:</b> {trade_data['amount']:,.2f} RUB\n\n"
-            f"━━━━━━━━━━━━━\n\n"
-            f"⏱️ <b>Осталось:</b> {remaining} сек\n\n"
-            f"{progress_bar}\n\n"
-            f"💡 <i>Ожидайте результата...</i>"
-        )
+        # Вычисляем текущую цену (плавное изменение)
+        progress = (total_seconds - remaining) / total_seconds
+        
+        if price_goes_up:
+            # Цена растет
+            price_change = start_price * (max_change_percent / 100) * progress
+            current_price = start_price + price_change
+            price_emoji = "📈"
+            price_change_text = f"+{price_change:,.2f}"
+        else:
+            # Цена падает
+            price_change = start_price * (max_change_percent / 100) * progress
+            current_price = start_price - price_change
+            price_emoji = "📉"
+            price_change_text = f"-{price_change:,.2f}"
+        
+        # Показываем начальную цену только в начале
+        if remaining == total_seconds:
+            timer_text = (
+                f"⏳ <b>СДЕЛКА АКТИВНА</b>\n\n"
+                f"📊 <b>Актив:</b> {trade_data['asset_name']}\n"
+                f"↕️ <b>Направление:</b> {trade_data['direction']}\n"
+                f"💰 <b>Сумма:</b> {trade_data['amount']:,.2f} RUB\n\n"
+                f"💵 <b>Начальная цена:</b> {start_price:,.2f} ₽\n"
+                f"{price_emoji} <b>Текущая цена:</b> {current_price:,.2f} ₽\n\n"
+                f"⏱️ <b>Осталось:</b> {remaining} сек\n\n"
+                f"{progress_bar}\n\n"
+                f"💡 <i>Ожидайте результата...</i>"
+            )
+        else:
+            timer_text = (
+                f"⏳ <b>СДЕЛКА АКТИВНА</b>\n\n"
+                f"📊 <b>Актив:</b> {trade_data['asset_name']}\n"
+                f"↕️ <b>Направление:</b> {trade_data['direction']}\n"
+                f"💰 <b>Сумма:</b> {trade_data['amount']:,.2f} RUB\n\n"
+                f"💵 <b>Начальная цена:</b> {start_price:,.2f} ₽\n"
+                f"{price_emoji} <b>Текущая цена:</b> {current_price:,.2f} ₽\n"
+                f"💹 <b>Изменение:</b> {price_change_text} ₽ ({(price_change/start_price*100):+.2f}%)\n\n"
+                f"⏱️ <b>Осталось:</b> {remaining} сек\n\n"
+                f"{progress_bar}\n\n"
+                f"💡 <i>Ожидайте результата...</i>"
+            )
         
         try:
             await callback.message.edit_text(
@@ -1133,13 +1561,24 @@ async def run_trade_timer(callback: CallbackQuery, user_id: int, total_seconds: 
         
         await asyncio.sleep(1)
     
+    # Вычисляем итоговую цену
+    if price_goes_up:
+        final_price = start_price + (start_price * max_change_percent / 100)
+        final_price_emoji = "📈"
+        final_change_text = f"+{(start_price * max_change_percent / 100):,.2f}"
+    else:
+        final_price = start_price - (start_price * max_change_percent / 100)
+        final_price_emoji = "📉"
+        final_change_text = f"-{(start_price * max_change_percent / 100):,.2f}"
+    
     final_text = (
         f"⏰ <b>СДЕЛКА ЗАВЕРШЕНА!</b>\n\n"
-        f"━━━━━━━━━━━━━\n\n"
         f"📊 <b>Актив:</b> {trade_data['asset_name']}\n"
         f"↕️ <b>Направление:</b> {trade_data['direction']}\n"
         f"💰 <b>Сумма:</b> {trade_data['amount']:,.2f} RUB\n\n"
-        f"━━━━━━━━━━━━━\n\n"
+        f"💵 <b>Начальная цена:</b> {start_price:,.2f} ₽\n"
+        f"{final_price_emoji} <b>Итоговая цена:</b> {final_price:,.2f} ₽\n"
+        f"💹 <b>Изменение:</b> {final_change_text} ₽ ({max_change_percent:+.2f}%)\n\n"
         f"🔎 <b>Подсчет результата...</b>"
     )
     
@@ -1393,7 +1832,6 @@ async def show_asset_page(callback: CallbackQuery, asset_name: str, category: st
         f"📊 <b>{asset_name}</b>\n\n"
         f"💰 <b>Текущий курс:</b> {asset_price:,.0f} ₽\n"
         f"💳 <b>Ваш баланс:</b> {user_data['balance']:,.2f} ₽\n\n"
-        f"━━━━━━━━━━━━━\n\n"
         f"🔥 <b>Начните торговля!</b>\n\n"
         f"💡 <i>Минимальная сумма: 1 ₽</i>\n"
         f"✏️ <b>Введите сумму инвестиции:</b>\n"
@@ -1452,17 +1890,8 @@ async def handle_chart_button(callback: CallbackQuery):
             chart_url = random.choice(COMMODITY_CHART_URLS)
         
         if chart_url:
-            builder = InlineKeyboardBuilder()
-            builder.add(types.InlineKeyboardButton(text="📊 Открыть график", url=chart_url))
-            builder.adjust(1)
-            
-            await callback.message.answer(
-                f"📈 <b>График для {asset_name}</b>\n\n"
-                f"Нажмите кнопку ниже, чтобы открыть интерактивный график:",
-                reply_markup=builder.as_markup(),
-                parse_mode=ParseMode.HTML
-            )
-            await callback.answer()
+            # Показываем уведомление с URL для открытия
+            await callback.answer(url=chart_url)
         else:
             await callback.answer("❌ График для этого актива временно недоступен", show_alert=True)
     except Exception as e:
@@ -1482,11 +1911,14 @@ async def handle_back_to_category(callback: CallbackQuery):
     
     await callback.answer()
 
-@router.callback_query(F.data == "worker_mammonts")
-async def handle_worker_mammonts(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+# ==================== АДМИН-ПАНЕЛЬ ====================
+
+@router.callback_query(F.data == "admin_all_users")
+async def handle_admin_all_users(callback: CallbackQuery):
+    """Показывает всех пользователей для администратора"""
+    admin_id = callback.from_user.id
     
-    if worker_id not in authorized_workers:
+    if admin_id not in authorized_admins:
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
@@ -1494,16 +1926,16 @@ async def handle_worker_mammonts(callback: CallbackQuery):
         await callback.answer("Нет зарегистрированных пользователей", show_alert=True)
         return
     
-    text = "👥 <b>Мои маммонты</b>\n\nВыберите пользователя:"
+    text = "👥 <b>Все пользователи</b>\n\nВыберите пользователя:"
     
     builder = InlineKeyboardBuilder()
     for user_id in users_data.keys():
         user_data = users_data[user_id]
         username = user_data.get('username', 'Неизвестно')
         button_text = f"@{username} | ID: {user_id} | {user_data.get('balance', 0):.2f} ₽"
-        builder.add(types.InlineKeyboardButton(text=button_text, callback_data=f"worker_user_{user_id}"))
+        builder.add(types.InlineKeyboardButton(text=button_text, callback_data=f"admin_user_{user_id}"))
     
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="worker_back_main"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_back_main"))
     builder.adjust(1)
     
     try:
@@ -1513,11 +1945,12 @@ async def handle_worker_mammonts(callback: CallbackQuery):
     
     await callback.answer()
 
-@router.callback_query(F.data.startswith("worker_user_"))
-async def handle_worker_user_profile(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+@router.callback_query(F.data.startswith("admin_user_"))
+async def handle_admin_user_profile(callback: CallbackQuery):
+    """Показывает профиль пользователя для администратора"""
+    admin_id = callback.from_user.id
     
-    if worker_id not in authorized_workers:
+    if admin_id not in authorized_admins:
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
@@ -1536,16 +1969,297 @@ async def handle_worker_user_profile(callback: CallbackQuery):
     wins = len([t for t in user_trades if t['result'] == "Победа"])
     win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
     
+    referrer_info = "Нет"
+    if user_data.get('referrer_id'):
+        referrer_info = f"Воркер ID: {user_data['referrer_id']}"
+    
     text = (
         f"👤 <b>Профиль пользователя</b>\n\n"
         f"🆔 ID: {user_id}\n"
+        f"👤 Username: @{user_data.get('username', 'Неизвестно')}\n"
+        f"💰 Баланс: {user_data.get('balance', 0):.2f} ₽\n"
+        f"📅 Дней на платформе: {user_data.get('days_on_platform', 0)}\n"
+        f"✅ Верификация: {'Да' if user_data.get('verified', False) else 'Нет'}\n"
+        f"👥 Реферер: {referrer_info}\n\n"
+        f"📊 <b>Статистика торговли:</b>\n"
+        f"Всего сделок: {total_trades}\n"
+        f"Побед: {wins} ({win_rate:.1f}%)\n\n"
+        f"⚙️ <b>Настройки:</b>\n"
+        f"Режим торговли: {user_config['trade_mode']}\n"
+        f"Коэффициент выигрыша: {user_config['win_coefficient']:.1f}x"
+    )
+    
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="💰 Изменить баланс", callback_data=f"admin_balance_{user_id}"))
+    builder.add(types.InlineKeyboardButton(text="🎲 Режим торговли", callback_data=f"admin_trademode_{user_id}"))
+    builder.add(types.InlineKeyboardButton(text="📈 Коэффициент", callback_data=f"admin_coef_{user_id}"))
+    builder.add(types.InlineKeyboardButton(text="💬 Отправить сообщение", callback_data=f"admin_message_{user_id}"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к списку", callback_data="admin_all_users"))
+    builder.adjust(2, 2, 1)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "admin_requisites")
+async def handle_admin_requisites(callback: CallbackQuery):
+    """Управление реквизитами (только для админов)"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    # Перенаправляем на существующий обработчик
+    callback.data = "worker_requisites"
+    await handle_worker_requisites(callback)
+
+@router.callback_query(F.data == "admin_broadcast")
+async def handle_admin_broadcast(callback: CallbackQuery):
+    """Рассылка всем пользователям (только для админов)"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    # Перенаправляем на существующий обработчик
+    callback.data = "worker_broadcast"
+    await handle_worker_broadcast(callback)
+
+@router.callback_query(F.data == "admin_back_main")
+async def handle_admin_back_main(callback: CallbackQuery):
+    """Возврат в главное меню админа"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    await show_admin_panel(callback.message)
+    await callback.answer()
+
+# Обработчики для управления пользователями из админ-панели
+@router.callback_query(F.data.startswith("admin_balance_"))
+async def handle_admin_balance(callback: CallbackQuery):
+    admin_id = callback.from_user.id
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    user_id = callback.data.split("_")[2]
+    worker_states[admin_id] = {'action': 'set_balance', 'target_user_id': user_id}
+    await callback.message.answer("💰 Введите новый баланс для пользователя:")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_trademode_"))
+async def handle_admin_trademode(callback: CallbackQuery):
+    admin_id = callback.from_user.id
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    user_id = callback.data.split("_")[2]
+    # Используем существующий обработчик
+    callback.data = f"worker_trademode_{user_id}"
+    await handle_worker_trademode(callback)
+
+@router.callback_query(F.data.startswith("admin_coef_"))
+async def handle_admin_coef(callback: CallbackQuery):
+    admin_id = callback.from_user.id
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    user_id = callback.data.split("_")[2]
+    callback.data = f"worker_coef_{user_id}"
+    await handle_worker_coef(callback)
+
+@router.callback_query(F.data.startswith("admin_message_"))
+async def handle_admin_message(callback: CallbackQuery):
+    admin_id = callback.from_user.id
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    user_id = callback.data.split("_")[2]
+    worker_states[admin_id] = {'action': 'send_message', 'target_user_id': user_id}
+    await callback.message.answer("💬 Введите сообщение для отправки пользователю:")
+    await callback.answer()
+
+# ==================== ПАНЕЛЬ ВОРКЕРА ====================
+
+@router.callback_query(F.data == "worker_referrals")
+async def handle_worker_referrals(callback: CallbackQuery):
+    """Показывает рефералов воркера"""
+    worker_id = callback.from_user.id
+    
+    if worker_id not in authorized_workers:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    # Находим всех рефералов этого воркера
+    referrals = [(uid, data) for uid, data in users_data.items() if data.get('referrer_id') == str(worker_id)]
+    
+    if not referrals:
+        await callback.answer("У вас пока нет рефералов", show_alert=True)
+        return
+    
+    text = f"👥 <b>Мои рефералы</b>\n\nВсего: {len(referrals)}\n\nВыберите пользователя:"
+    
+    builder = InlineKeyboardBuilder()
+    for user_id, user_data in referrals:
+        username = user_data.get('username', 'Неизвестно')
+        button_text = f"@{username} | ID: {user_id} | {user_data.get('balance', 0):.2f} ₽"
+        builder.add(types.InlineKeyboardButton(text=button_text, callback_data=f"worker_user_{user_id}"))
+    
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="worker_back_main"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "worker_back_main")
+async def handle_worker_back_main(callback: CallbackQuery):
+    """Возврат в главное меню воркера"""
+    worker_id = callback.from_user.id
+    
+    if worker_id not in authorized_workers:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    await show_worker_panel(callback.message)
+    await callback.answer()
+
+@router.callback_query(F.data == "worker_stats")
+async def handle_worker_stats(callback: CallbackQuery):
+    """Детальная статистика для воркера"""
+    worker_id = callback.from_user.id
+    
+    if worker_id not in authorized_workers:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    # Получаем всех рефералов
+    referrals = [(uid, data) for uid, data in users_data.items() if data.get('referrer_id') == str(worker_id)]
+    
+    if not referrals:
+        await callback.answer("У вас пока нет рефералов", show_alert=True)
+        return
+    
+    # Статистика по балансам
+    total_balance = sum([r[1].get('balance', 0) for r in referrals])
+    avg_balance = total_balance / len(referrals) if referrals else 0
+    
+    # Статистика по сделкам
+    trade_history = load_trade_history()
+    total_trades = 0
+    winning_trades = 0
+    losing_trades = 0
+    total_profit = 0
+    total_loss = 0
+    
+    for uid, _ in referrals:
+        user_trades = trade_history.get(uid, [])
+        total_trades += len(user_trades)
+        for trade in user_trades:
+            if trade.get('result') == 'Победа':
+                winning_trades += 1
+                total_profit += trade.get('profit', 0)
+            else:
+                losing_trades += 1
+                total_loss += trade.get('amount', 0)
+    
+    win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+    
+    # Статистика по активности
+    active_count = len([r for r in referrals if r[1].get('balance', 0) > 0])
+    verified_count = len([r for r in referrals if r[1].get('verified', False)])
+    
+    text = (
+        f"📊 <b>Детальная статистика</b>\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"👥 <b>Рефералы:</b>\n"
+        f"• Всего: {len(referrals)}\n"
+        f"• Активных: {active_count}\n"
+        f"• Верифицированных: {verified_count}\n\n"
+        f"💰 <b>Финансы:</b>\n"
+        f"• Общий баланс: {total_balance:,.2f} ₽\n"
+        f"• Средний баланс: {avg_balance:,.2f} ₽\n\n"
+        f"📈 <b>Торговля:</b>\n"
+        f"• Всего сделок: {total_trades}\n"
+        f"• Прибыльных: {winning_trades}\n"
+        f"• Убыточных: {losing_trades}\n"
+        f"• Win Rate: {win_rate:.1f}%\n\n"
+        f"💵 <b>Результаты:</b>\n"
+        f"• Общая прибыль: +{total_profit:,.2f} ₽\n"
+        f"• Общие убытки: -{total_loss:,.2f} ₽\n"
+        f"• Чистый результат: {(total_profit - total_loss):,.2f} ₽"
+    )
+    
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="worker_back_main"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "worker_mammonts")
+async def handle_worker_mammonts(callback: CallbackQuery):
+    """Старый обработчик - перенаправляем на новый"""
+    await handle_worker_referrals(callback)
+
+@router.callback_query(F.data.startswith("worker_user_"))
+async def handle_worker_user_profile(callback: CallbackQuery):
+    """Показывает профиль пользователя для воркера (только своих рефералов)"""
+    worker_id = callback.from_user.id
+    
+    if worker_id not in authorized_workers:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    user_id = callback.data.split("_")[2]
+    
+    if user_id not in users_data:
+        await callback.answer("Пользователь не найден", show_alert=True)
+        return
+    
+    # Проверяем, что это реферал воркера
+    user_data = users_data[user_id]
+    if user_data.get('referrer_id') != str(worker_id):
+        await callback.answer("❌ Вы можете управлять только своими рефералами", show_alert=True)
+        return
+    
+    user_config = get_user_worker_config(user_id)
+    
+    trade_history = load_trade_history()
+    user_trades = trade_history.get(user_id, [])
+    total_trades = len(user_trades)
+    wins = len([t for t in user_trades if t['result'] == "Победа"])
+    win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+    
+    text = (
+        f"👤 <b>Профиль реферала</b>\n\n"
+        f"🆔 ID: {user_id}\n"
+        f"👤 Username: @{user_data.get('username', 'Неизвестно')}\n"
         f"💰 Баланс: {user_data.get('balance', 0):.2f} ₽\n"
         f"📅 Дней на платформе: {user_data.get('days_on_platform', 0)}\n"
         f"✅ Верификация: {'Да' if user_data.get('verified', False) else 'Нет'}\n\n"
         f"📊 <b>Статистика торговли:</b>\n"
         f"Всего сделок: {total_trades}\n"
         f"Побед: {wins} ({win_rate:.1f}%)\n\n"
-        f"⚙️ <b>Настройки воркера:</b>\n"
+        f"⚙️ <b>Настройки:</b>\n"
         f"Режим торговли: {user_config['trade_mode']}\n"
         f"Коэффициент выигрыша: {user_config['win_coefficient']:.1f}x"
     )
@@ -1555,7 +2269,7 @@ async def handle_worker_user_profile(callback: CallbackQuery):
     builder.add(types.InlineKeyboardButton(text="🎲 Режим торговли", callback_data=f"worker_trademode_{user_id}"))
     builder.add(types.InlineKeyboardButton(text="📈 Коэффициент", callback_data=f"worker_coef_{user_id}"))
     builder.add(types.InlineKeyboardButton(text="💬 Отправить сообщение", callback_data=f"worker_message_{user_id}"))
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к списку", callback_data="worker_mammonts"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад к списку", callback_data="worker_referrals"))
     builder.adjust(2, 2, 1)
     
     try:
@@ -1738,10 +2452,12 @@ async def handle_worker_message(callback: CallbackQuery):
 
 @router.callback_query(F.data == "worker_requisites")
 async def handle_worker_requisites(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+    """Управление реквизитами (только для админов)"""
+    user_id = callback.from_user.id
     
-    if worker_id not in authorized_workers:
-        await callback.answer("❌ Доступ запрещен", show_alert=True)
+    # Проверяем, что пользователь - администратор
+    if user_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен. Только для администраторов.", show_alert=True)
         return
     
     requisites = load_requisites()
@@ -1838,13 +2554,15 @@ async def handle_worker_edit_crypto(callback: CallbackQuery):
 
 @router.callback_query(F.data == "worker_broadcast")
 async def handle_worker_broadcast(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+    """Рассылка сообщений (только для админов)"""
+    user_id = callback.from_user.id
     
-    if worker_id not in authorized_workers:
-        await callback.answer("❌ Доступ запрещен", show_alert=True)
+    # Проверяем, что пользователь - администратор
+    if user_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен. Только для администраторов.", show_alert=True)
         return
     
-    worker_states[worker_id] = {
+    worker_states[user_id] = {
         'action': 'broadcast'
     }
     

@@ -6,7 +6,7 @@
     "verified": false,
     "join_date": "2025-10-23T22:20:49.679832",
     "username": "Nka_arm",
-    "days_on_platform": 1
+    "days_on_platform": 2
   },
   "8269461372": {
     "accepted_terms": false,
@@ -15,7 +15,7 @@
     "verified": false,
     "join_date": "2025-10-23T22:20:34.295773",
     "username": "eToroTrade_Robot",
-    "days_on_platform": 1
+    "days_on_platform": 2
   },
   "7474193095": {
     "accepted_terms": true,
@@ -51,6 +51,15 @@
     "verified": false,
     "join_date": "2025-10-25T20:54:26.275031",
     "username": "Kirya_d",
+    "days_on_platform": 1
+  },
+  "1798096412": {
+    "accepted_terms": true,
+    "balance": 1000.0,
+    "pending_withdrawal": 0.0,
+    "verified": false,
+    "join_date": "2025-10-25T22:58:41.836932",
+    "username": "andriitkchk",
     "days_on_platform": 1
   }
 }
