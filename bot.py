@@ -210,8 +210,8 @@ def get_user_worker_config(user_id):
         save_worker_config()
     return worker_config[user_id_str]
 
-async def add_trade_to_history(bot, user_id: int, trade_data: dict, result: str, win_amount: float, new_balance: float):
-    """Добавляет сделку в историю и уведомляет воркера"""
+def add_trade_to_history(user_id: int, trade_data: dict, result: str, win_amount: float, new_balance: float):
+    """Добавляет сделку в историю"""
     trade_history = load_trade_history()
     user_id_str = str(user_id)
     
@@ -233,28 +233,6 @@ async def add_trade_to_history(bot, user_id: int, trade_data: dict, result: str,
     
     trade_history[user_id_str].append(trade_record)
     save_trade_history(trade_history)
-    
-    # Уведомляем воркера о сделке реферала
-    user_data = users_data.get(user_id_str, {})
-    referrer_id = user_data.get('referrer_id')
-    if referrer_id:
-        try:
-            await notify_worker(
-                bot,
-                int(referrer_id),
-                'trade',
-                user_data,
-                {
-                    'user_id': user_id,
-                    'asset': trade_data['asset_name'],
-                    'amount': trade_data['amount'],
-                    'direction': trade_data['direction'],
-                    'result': result,
-                    'profit': win_amount
-                }
-            )
-        except Exception as e:
-            logging.error(f"Ошибка отправки уведомления о сделке: {e}")
 
 def get_user_data(user_id, username="", referrer_id=None):
     """Получает данные пользователя или создает новые"""
@@ -282,61 +260,6 @@ def get_user_data(user_id, username="", referrer_id=None):
     user_data["days_on_platform"] = max(1, days_on_platform)
     
     return user_data
-
-async def notify_worker(bot, worker_id: int, notification_type: str, user_data: dict, extra_data: dict = None):
-    """Отправляет уведомление воркеру о действиях его реферала"""
-    if worker_id not in authorized_workers:
-        return
-    
-    user_id = extra_data.get('user_id', 'Unknown') if extra_data else 'Unknown'
-    username = user_data.get('username', 'Неизвестно')
-    
-    notifications = {
-        'new_referral': (
-            "🎉 <b>Новый реферал!</b>\n\n"
-            f"👤 <b>Пользователь:</b> @{username}\n"
-            f"🆔 <b>ID:</b> {user_id}\n"
-            f"📅 <b>Дата регистрации:</b> {datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
-            f"✅ Пользователь принял условия и зарегистрировался по вашей реферальной ссылке!"
-        ),
-        'deposit': (
-            "💰 <b>Пополнение баланса</b>\n\n"
-            f"👤 <b>Пользователь:</b> @{username}\n"
-            f"🆔 <b>ID:</b> {user_id}\n"
-            f"💵 <b>Сумма:</b> {extra_data.get('amount', 0):,.2f} ₽\n"
-            f"💳 <b>Новый баланс:</b> {user_data.get('balance', 0):,.2f} ₽\n\n"
-            f"✅ Ваш реферал пополнил счет!"
-        ),
-        'trade': (
-            "📈 <b>Новая сделка</b>\n\n"
-            f"👤 <b>Пользователь:</b> @{username}\n"
-            f"🆔 <b>ID:</b> {user_id}\n"
-            f"📊 <b>Актив:</b> {extra_data.get('asset', 'N/A')}\n"
-            f"💰 <b>Сумма:</b> {extra_data.get('amount', 0):,.2f} ₽\n"
-            f"↕️ <b>Направление:</b> {extra_data.get('direction', 'N/A')}\n"
-            f"🎯 <b>Результат:</b> {extra_data.get('result', 'N/A')}\n\n"
-            f"{'✅ Прибыль: +' + str(extra_data.get('profit', 0)) + ' ₽' if extra_data.get('result') == 'Победа' else '❌ Убыток'}"
-        ),
-        'withdrawal_request': (
-            "💸 <b>Запрос на вывод</b>\n\n"
-            f"👤 <b>Пользователь:</b> @{username}\n"
-            f"🆔 <b>ID:</b> {user_id}\n"
-            f"💵 <b>Сумма:</b> {extra_data.get('amount', 0):,.2f} ₽\n"
-            f"📋 <b>Метод:</b> {extra_data.get('method', 'N/A')}\n\n"
-            f"⚠️ Ваш реферал запросил вывод средств!"
-        )
-    }
-    
-    text = notifications.get(notification_type)
-    if text:
-        try:
-            await bot.send_message(
-                chat_id=worker_id,
-                text=text,
-                parse_mode=ParseMode.HTML
-            )
-        except Exception as e:
-            logging.error(f"Ошибка отправки уведомления воркеру {worker_id}: {e}")
 
 def create_static_menu():
     """Создает статическое меню внизу"""
@@ -407,20 +330,6 @@ async def process_terms_accept(callback: CallbackQuery):
     
     user_data["accepted_terms"] = True
     save_users_data()
-    
-    # Уведомляем воркера о новом реферале
-    referrer_id = user_data.get('referrer_id')
-    if referrer_id:
-        try:
-            await notify_worker(
-                callback.bot,
-                int(referrer_id),
-                'new_referral',
-                user_data,
-                {'user_id': user_id}
-            )
-        except Exception as e:
-            logging.error(f"Ошибка отправки уведомления о новом реферале: {e}")
     
     await callback.answer("Условия приняты!", show_alert=False)
     
@@ -909,47 +818,20 @@ async def show_worker_panel(message: Message):
     bot_info = await bot.get_me()
     referral_link = f"https://t.me/{bot_info.username}?start=worker_{user_id}"
     
-    # Получаем всех рефералов воркера
-    referrals = [(uid, data) for uid, data in users_data.items() if data.get('referrer_id') == str(user_id)]
-    referrals_count = len(referrals)
-    
-    # Подсчитываем статистику
-    active_referrals = len([r for r in referrals if r[1].get('balance', 0) > 0])
-    inactive_referrals = referrals_count - active_referrals
-    
-    # Общий баланс рефералов
-    total_balance = sum([r[1].get('balance', 0) for r in referrals])
-    
-    # Статистика сделок
-    trade_history = load_trade_history()
-    total_trades = 0
-    total_profit = 0
-    
-    for uid, _ in referrals:
-        user_trades = trade_history.get(uid, [])
-        total_trades += len(user_trades)
-        for trade in user_trades:
-            if trade.get('result') == 'Победа':
-                total_profit += trade.get('profit', 0)
+    # Подсчитываем количество рефералов
+    referrals_count = len([uid for uid, data in users_data.items() if data.get('referrer_id') == str(user_id)])
     
     text = (
         f"🔧 <b>Панель воркера</b>\n\n"
+        f"Добро пожаловать, воркер!\n\n"
         f"📎 <b>Ваша реферальная ссылка:</b>\n"
         f"<code>{referral_link}</code>\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"📊 <b>Статистика рефералов:</b>\n\n"
-        f"👥 <b>Всего рефералов:</b> {referrals_count}\n"
-        f"✅ <b>Активных:</b> {active_referrals}\n"
-        f"💤 <b>Неактивных:</b> {inactive_referrals}\n\n"
-        f"💰 <b>Общий баланс:</b> {total_balance:,.2f} ₽\n"
-        f"📈 <b>Всего сделок:</b> {total_trades}\n"
-        f"💵 <b>Общая прибыль:</b> {total_profit:,.2f} ₽\n\n"
+        f"👥 <b>Рефералов:</b> {referrals_count}\n\n"
         f"Выберите действие:"
     )
     
     builder = InlineKeyboardBuilder()
     builder.add(types.InlineKeyboardButton(text="👥 Мои рефералы", callback_data="worker_referrals"))
-    builder.add(types.InlineKeyboardButton(text="📊 Детальная статистика", callback_data="worker_stats"))
     builder.adjust(1)
     
     await message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
@@ -1030,26 +912,6 @@ async def handle_worker_text_input(message: Message):
         amount = state['amount']
         method = state['method']
         requisites_text = message.text.strip()
-        
-        # Уведомляем воркера о запросе на вывод
-        user_data = get_user_data(worker_id)
-        referrer_id = user_data.get('referrer_id')
-        if referrer_id:
-            try:
-                method_name = "Банковская карта" if method == "bank" else "Криптовалюта"
-                await notify_worker(
-                    message.bot,
-                    int(referrer_id),
-                    'withdrawal_request',
-                    user_data,
-                    {
-                        'user_id': worker_id,
-                        'amount': amount,
-                        'method': method_name
-                    }
-                )
-            except Exception as e:
-                logging.error(f"Ошибка отправки уведомления о выводе: {e}")
         
         # Отправляем сообщение о принятии заявки
         await message.answer(
@@ -1446,7 +1308,7 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
         user_data['balance'] += win_amount
         save_users_data()
         
-        await add_trade_to_history(callback.bot, user_id, trade_data, "Победа", win_amount, user_data['balance'])
+        add_trade_to_history(user_id, trade_data, "Победа", win_amount, user_data['balance'])
         
         result_text = (
             f"🎉 <b>ПОБЕДА!</b> 🎉\n\n"
@@ -1462,7 +1324,7 @@ async def execute_trade(callback: CallbackQuery, user_id: int):
         user_data['balance'] = max(0, user_data['balance'] - loss_amount)
         save_users_data()
         
-        await add_trade_to_history(callback.bot, user_id, trade_data, "Поражение", 0, user_data['balance'])
+        add_trade_to_history(user_id, trade_data, "Поражение", 0, user_data['balance'])
         
         result_text = (
             f"😔 <b>ПОРАЖЕНИЕ</b>\n\n"
@@ -2136,83 +1998,6 @@ async def handle_worker_back_main(callback: CallbackQuery):
         return
     
     await show_worker_panel(callback.message)
-    await callback.answer()
-
-@router.callback_query(F.data == "worker_stats")
-async def handle_worker_stats(callback: CallbackQuery):
-    """Детальная статистика для воркера"""
-    worker_id = callback.from_user.id
-    
-    if worker_id not in authorized_workers:
-        await callback.answer("❌ Доступ запрещен", show_alert=True)
-        return
-    
-    # Получаем всех рефералов
-    referrals = [(uid, data) for uid, data in users_data.items() if data.get('referrer_id') == str(worker_id)]
-    
-    if not referrals:
-        await callback.answer("У вас пока нет рефералов", show_alert=True)
-        return
-    
-    # Статистика по балансам
-    total_balance = sum([r[1].get('balance', 0) for r in referrals])
-    avg_balance = total_balance / len(referrals) if referrals else 0
-    
-    # Статистика по сделкам
-    trade_history = load_trade_history()
-    total_trades = 0
-    winning_trades = 0
-    losing_trades = 0
-    total_profit = 0
-    total_loss = 0
-    
-    for uid, _ in referrals:
-        user_trades = trade_history.get(uid, [])
-        total_trades += len(user_trades)
-        for trade in user_trades:
-            if trade.get('result') == 'Победа':
-                winning_trades += 1
-                total_profit += trade.get('profit', 0)
-            else:
-                losing_trades += 1
-                total_loss += trade.get('amount', 0)
-    
-    win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
-    
-    # Статистика по активности
-    active_count = len([r for r in referrals if r[1].get('balance', 0) > 0])
-    verified_count = len([r for r in referrals if r[1].get('verified', False)])
-    
-    text = (
-        f"📊 <b>Детальная статистика</b>\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"👥 <b>Рефералы:</b>\n"
-        f"• Всего: {len(referrals)}\n"
-        f"• Активных: {active_count}\n"
-        f"• Верифицированных: {verified_count}\n\n"
-        f"💰 <b>Финансы:</b>\n"
-        f"• Общий баланс: {total_balance:,.2f} ₽\n"
-        f"• Средний баланс: {avg_balance:,.2f} ₽\n\n"
-        f"📈 <b>Торговля:</b>\n"
-        f"• Всего сделок: {total_trades}\n"
-        f"• Прибыльных: {winning_trades}\n"
-        f"• Убыточных: {losing_trades}\n"
-        f"• Win Rate: {win_rate:.1f}%\n\n"
-        f"💵 <b>Результаты:</b>\n"
-        f"• Общая прибыль: +{total_profit:,.2f} ₽\n"
-        f"• Общие убытки: -{total_loss:,.2f} ₽\n"
-        f"• Чистый результат: {(total_profit - total_loss):,.2f} ₽"
-    )
-    
-    builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="worker_back_main"))
-    builder.adjust(1)
-    
-    try:
-        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
-    except TelegramBadRequest:
-        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
-    
     await callback.answer()
 
 @router.callback_query(F.data == "worker_mammonts")
