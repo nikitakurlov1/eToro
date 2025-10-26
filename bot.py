@@ -1912,9 +1912,27 @@ async def handle_admin_trademode(callback: CallbackQuery):
         return
     
     user_id = callback.data.split("_")[2]
-    # Используем существующий обработчик
-    callback.data = f"worker_trademode_{user_id}"
-    await handle_worker_trademode(callback)
+    user_config = get_user_worker_config(user_id)
+    
+    text = (
+        f"🎲 <b>Режим торговли для пользователя {user_id}</b>\n\n"
+        f"Текущий режим: {user_config['trade_mode']}\n\n"
+        "Выберите новый режим:"
+    )
+    
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="🎲 Случайный", callback_data=f"admin_setmode_{user_id}_random"))
+    builder.add(types.InlineKeyboardButton(text="✅ Всегда победа", callback_data=f"admin_setmode_{user_id}_always_win"))
+    builder.add(types.InlineKeyboardButton(text="❌ Всегда поражение", callback_data=f"admin_setmode_{user_id}_always_lose"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_user_{user_id}"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
 
 @router.callback_query(F.data.startswith("admin_coef_"))
 async def handle_admin_coef(callback: CallbackQuery):
@@ -1924,8 +1942,75 @@ async def handle_admin_coef(callback: CallbackQuery):
         return
     
     user_id = callback.data.split("_")[2]
-    callback.data = f"worker_coef_{user_id}"
-    await handle_worker_coef(callback)
+    user_config = get_user_worker_config(user_id)
+    
+    text = (
+        f"📈 <b>Коэффициент выигрыша для пользователя {user_id}</b>\n\n"
+        f"Текущий коэффициент: {user_config['win_coefficient']:.1f}x\n\n"
+        "Выберите новый коэффициент:"
+    )
+    
+    builder = InlineKeyboardBuilder()
+    coefficients = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.5, 3.0]
+    for coef in coefficients:
+        builder.add(types.InlineKeyboardButton(text=f"{coef:.1f}x", callback_data=f"admin_setcoef_{user_id}_{coef}"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_user_{user_id}"))
+    builder.adjust(3, 3, 3, 3, 1, 1)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_setmode_"))
+async def handle_admin_setmode(callback: CallbackQuery):
+    admin_id = callback.from_user.id
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    parts = callback.data.split("_")
+    user_id = parts[2]
+    mode = "_".join(parts[3:])
+    
+    user_config = get_user_worker_config(user_id)
+    user_config['trade_mode'] = mode
+    save_worker_config()
+    
+    mode_names = {
+        "random": "Случайный",
+        "always_win": "Всегда победа",
+        "always_lose": "Всегда поражение"
+    }
+    
+    await callback.answer(f"✅ Режим изменен на: {mode_names.get(mode, mode)}", show_alert=True)
+    
+    # Возвращаемся к профилю пользователя
+    callback.data = f"admin_user_{user_id}"
+    await handle_admin_user_profile(callback)
+
+@router.callback_query(F.data.startswith("admin_setcoef_"))
+async def handle_admin_setcoef(callback: CallbackQuery):
+    admin_id = callback.from_user.id
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    parts = callback.data.split("_")
+    user_id = parts[2]
+    coef = float(parts[3])
+    
+    user_config = get_user_worker_config(user_id)
+    user_config['win_coefficient'] = coef
+    save_worker_config()
+    
+    await callback.answer(f"✅ Коэффициент изменен на: {coef:.1f}x", show_alert=True)
+    
+    # Возвращаемся к профилю пользователя
+    callback.data = f"admin_user_{user_id}"
+    await handle_admin_user_profile(callback)
 
 @router.callback_query(F.data.startswith("admin_message_"))
 async def handle_admin_message(callback: CallbackQuery):
