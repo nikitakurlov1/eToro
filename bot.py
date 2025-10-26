@@ -3,6 +3,7 @@ import logging
 import sys
 import json
 import random
+import os
 from datetime import datetime
 from os.path import exists
 
@@ -16,13 +17,17 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 # --- НАСТРОЙКИ ---
 BOT_TOKEN = "8269461372:AAFt2r92GoVh7tG9uHcsSyh2rG_rH5UJcP8"
-PHOTO_PATH = "/Users/nikitakurlov/eToro/etoro.png"
-PROFILE_PHOTO_PATH = "/Users/nikitakurlov/eToro/image copy.png"
-TRADING_PHOTO_PATH = "/Users/nikitakurlov/eToro/image copy.png"
-USERS_DATA_FILE = "/Users/nikitakurlov/eToro/users_data.json"
-TRADE_HISTORY_FILE = "/Users/nikitakurlov/eToro/trade_history.json"
-WORKER_CONFIG_FILE = "/Users/nikitakurlov/eToro/worker_config.json"
-REQUISITES_FILE = "/Users/nikitakurlov/eToro/requisites.json"
+
+# Относительные пути к файлам (для работы на хостинге)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+PHOTO_PATH = os.path.join(BASE_DIR, "etoro.png")
+PROFILE_PHOTO_PATH = os.path.join(BASE_DIR, "image copy.png")
+TRADING_PHOTO_PATH = os.path.join(BASE_DIR, "image copy.png")
+USERS_DATA_FILE = os.path.join(BASE_DIR, "users_data.json")
+TRADE_HISTORY_FILE = os.path.join(BASE_DIR, "trade_history.json")
+WORKER_CONFIG_FILE = os.path.join(BASE_DIR, "worker_config.json")
+REQUISITES_FILE = os.path.join(BASE_DIR, "requisites.json")
 
 # Данные для торговли
 CRYPTO_CURRENCIES = [
@@ -1711,9 +1716,22 @@ async def show_asset_page(callback: CallbackQuery, asset_name: str, category: st
     }
     
     builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="📊 Обзор графика", callback_data=f"chart_{category}:{asset_name}"))
+    
+    # Определяем URL графика в зависимости от категории
+    chart_url = None
+    if category == "crypto":
+        chart_url = CRYPTO_CHART_URLS.get(asset_name)
+    elif category == "stocks":
+        chart_url = random.choice(STOCK_CHART_URLS) if STOCK_CHART_URLS else None
+    elif category == "commodities":
+        chart_url = random.choice(COMMODITY_CHART_URLS) if COMMODITY_CHART_URLS else None
+    
+    # Добавляем кнопку графика только если URL существует
+    if chart_url:
+        builder.add(types.InlineKeyboardButton(text="📊 Обзор графика", url=chart_url))
+    
     builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"back_to_{category}"))
-    builder.adjust(2)
+    builder.adjust(2 if chart_url else 1)
     
     try:
         await callback.message.edit_caption(
@@ -1728,37 +1746,6 @@ async def show_asset_page(callback: CallbackQuery, asset_name: str, category: st
             reply_markup=builder.as_markup(),
             parse_mode=ParseMode.HTML
         )
-
-@router.callback_query(F.data.startswith("chart_"))
-async def handle_chart_button(callback: CallbackQuery):
-    try:
-        # Парсим callback_data: chart_{category}:{asset_name}
-        data_parts = callback.data.split(":", 1)
-        if len(data_parts) < 2:
-            await callback.answer("❌ Ошибка получения данных графика", show_alert=True)
-            return
-        
-        category = data_parts[0].replace("chart_", "")
-        asset_name = data_parts[1]
-        
-        chart_url = None
-        
-        # Определяем URL графика в зависимости от категории
-        if category == "crypto":
-            chart_url = CRYPTO_CHART_URLS.get(asset_name)
-        elif category == "stocks":
-            chart_url = random.choice(STOCK_CHART_URLS)
-        elif category == "commodities":
-            chart_url = random.choice(COMMODITY_CHART_URLS)
-        
-        if chart_url:
-            # Показываем уведомление с URL для открытия
-            await callback.answer(url=chart_url)
-        else:
-            await callback.answer("❌ График для этого актива временно недоступен", show_alert=True)
-    except Exception as e:
-        logging.error(f"Ошибка при открытии графика: {e}")
-        await callback.answer("❌ Ошибка при открытии графика", show_alert=True)
 
 @router.callback_query(F.data.startswith("back_to_"))
 async def handle_back_to_category(callback: CallbackQuery):
