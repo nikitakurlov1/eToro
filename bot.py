@@ -2073,7 +2073,12 @@ async def handle_worker_trademode(callback: CallbackQuery):
     builder.add(types.InlineKeyboardButton(text="🎲 Случайный", callback_data=f"worker_setmode_{user_id}_random"))
     builder.add(types.InlineKeyboardButton(text="✅ Всегда победа", callback_data=f"worker_setmode_{user_id}_always_win"))
     builder.add(types.InlineKeyboardButton(text="❌ Всегда поражение", callback_data=f"worker_setmode_{user_id}_always_lose"))
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"worker_user_{user_id}"))
+    
+    # Кнопка "Назад" зависит от того, кто вызвал (админ или воркер)
+    if user_id_caller in authorized_admins:
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_user_{user_id}"))
+    else:
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"worker_user_{user_id}"))
     builder.adjust(1)
     
     try:
@@ -2102,7 +2107,7 @@ async def handle_worker_setmode(callback: CallbackQuery):
     user_config['trade_mode'] = mode
     save_worker_config()
     
-    logging.info(f"Worker {worker_id} set trade mode to '{mode}' for user {user_id}")
+    logging.info(f"User {user_id_caller} set trade mode to '{mode}' for user {user_id}")
     
     mode_names = {
         "random": "Случайный",
@@ -2143,7 +2148,12 @@ async def handle_worker_coefficient(callback: CallbackQuery):
     coefficients = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.5, 3.0]
     for coef in coefficients:
         builder.add(types.InlineKeyboardButton(text=f"{coef:.1f}x", callback_data=f"worker_setcoef_{user_id}_{coef}"))
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"worker_user_{user_id}"))
+    
+    # Кнопка "Назад" зависит от того, кто вызвал (админ или воркер)
+    if user_id_caller in authorized_admins:
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_user_{user_id}"))
+    else:
+        builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"worker_user_{user_id}"))
     builder.adjust(3, 3, 3, 3, 1, 1)  # По 3 кнопки в ряд для удобства
     
     try:
@@ -2172,7 +2182,7 @@ async def handle_worker_setcoef(callback: CallbackQuery):
     user_config['win_coefficient'] = coef
     save_worker_config()
     
-    logging.info(f"Worker {worker_id} set win coefficient to {coef}x for user {user_id}")
+    logging.info(f"User {user_id_caller} set win coefficient to {coef}x for user {user_id}")
     
     await callback.answer(f"✅ Коэффициент изменен на: {coef:.1f}x", show_alert=True)
     
