@@ -2053,9 +2053,10 @@ async def handle_worker_user_profile(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("worker_trademode_"))
 async def handle_worker_trademode(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+    user_id_caller = callback.from_user.id
     
-    if worker_id not in authorized_workers:
+    # Проверяем, что это воркер или админ
+    if user_id_caller not in authorized_workers and user_id_caller not in authorized_admins:
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
@@ -2084,9 +2085,10 @@ async def handle_worker_trademode(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("worker_setmode_"))
 async def handle_worker_setmode(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+    user_id_caller = callback.from_user.id
     
-    if worker_id not in authorized_workers:
+    # Проверяем, что это воркер или админ
+    if user_id_caller not in authorized_workers and user_id_caller not in authorized_admins:
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
@@ -2109,13 +2111,21 @@ async def handle_worker_setmode(callback: CallbackQuery):
     }
     
     await callback.answer(f"✅ Режим изменен на: {mode_names.get(mode, mode)}", show_alert=True)
-    await handle_worker_user_profile(callback)
+    
+    # Возвращаемся к профилю пользователя
+    if user_id_caller in authorized_admins:
+        callback.data = f"admin_user_{user_id}"
+        await handle_admin_user_profile(callback)
+    else:
+        callback.data = f"worker_user_{user_id}"
+        await handle_worker_user_profile(callback)
 
 @router.callback_query(F.data.startswith("worker_coef_"))
 async def handle_worker_coefficient(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+    user_id_caller = callback.from_user.id
     
-    if worker_id not in authorized_workers:
+    # Проверяем, что это воркер или админ
+    if user_id_caller not in authorized_workers and user_id_caller not in authorized_admins:
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
@@ -2145,9 +2155,10 @@ async def handle_worker_coefficient(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("worker_setcoef_"))
 async def handle_worker_setcoef(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+    user_id_caller = callback.from_user.id
     
-    if worker_id not in authorized_workers:
+    # Проверяем, что это воркер или админ
+    if user_id_caller not in authorized_workers and user_id_caller not in authorized_admins:
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
@@ -2164,7 +2175,14 @@ async def handle_worker_setcoef(callback: CallbackQuery):
     logging.info(f"Worker {worker_id} set win coefficient to {coef}x for user {user_id}")
     
     await callback.answer(f"✅ Коэффициент изменен на: {coef:.1f}x", show_alert=True)
-    await handle_worker_user_profile(callback)
+    
+    # Возвращаемся к профилю пользователя
+    if user_id_caller in authorized_admins:
+        callback.data = f"admin_user_{user_id}"
+        await handle_admin_user_profile(callback)
+    else:
+        callback.data = f"worker_user_{user_id}"
+        await handle_worker_user_profile(callback)
 
 @router.callback_query(F.data.startswith("worker_balance_"))
 async def handle_worker_balance(callback: CallbackQuery):
