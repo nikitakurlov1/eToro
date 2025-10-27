@@ -676,7 +676,7 @@ async def handle_deposit_bank(callback: CallbackQuery):
         "<b>2.</b> Введите сумму пополнения для создания запроса\n"
         "<b>3.</b> Дождитесь подтверждения от администратора\n"
         "<b>4.</b> Средства будут зачислены после проверки\n\n"
-        "⚡ <b>Минимальная сумма:</b> 100 ₽\n"
+        "⚡ <b>Минимальная сумма:</b> 1000 ₽\n"
         "💰 <b>Комиссия:</b> 0%\n\n"
         "💵 <b>Введите сумму пополнения:</b>"
     )
@@ -2342,6 +2342,40 @@ async def handle_admin_all_users(callback: CallbackQuery):
     
     await callback.answer()
 
+@router.callback_query(F.data == "admin_requisites")
+async def handle_admin_requisites(callback: CallbackQuery):
+    """Управление реквизитами (только для админов)"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    # Загружаем текущие реквизиты
+    requisites = load_requisites()
+    
+    text = (
+        "💳 <b>Реквизиты для пополнения</b>\n\n"
+        f"🏦 Банк: {requisites.get('bank_name', 'Не указан')}\n"
+        f"💳 Карта: {requisites.get('bank_card', 'Не указана')}\n"
+        f"👤 Владелец: {requisites.get('cardholder_name', 'Не указан')}\n\n"
+        f"₿ Крипто: {requisites.get('crypto_type', 'Не указан')}\n"
+        f"📧 Кошелек: {requisites.get('crypto_wallet', 'Не указан')}"
+    )
+    
+    builder = InlineKeyboardBuilder()
+    builder.add(types.InlineKeyboardButton(text="✏️ Изменить банковскую карту", callback_data="admin_edit_bank"))
+    builder.add(types.InlineKeyboardButton(text="✏️ Изменить крипто-кошелек", callback_data="admin_edit_crypto"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_back_main"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
+
 @router.callback_query(F.data.startswith("admin_user_"))
 async def handle_admin_user_profile(callback: CallbackQuery):
     """Показывает профиль пользователя для администратора"""
@@ -2918,6 +2952,40 @@ async def handle_worker_message(callback: CallbackQuery):
     
     await callback.answer()
 
+# ==================== АДМИН-ПАНЕЛЬ ====================
+
+@router.callback_query(F.data == "admin_all_users")
+async def handle_admin_all_users(callback: CallbackQuery):
+    """Показывает всех пользователей для администратора"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    if not users_data:
+        await callback.answer("Нет зарегистрированных пользователей", show_alert=True)
+        return
+    
+    text = "👥 <b>Все пользователи</b>\n\nВыберите пользователя:"
+    
+    builder = InlineKeyboardBuilder()
+    for user_id in users_data.keys():
+        user_data = users_data[user_id]
+        username = user_data.get('username', 'Неизвестно')
+        button_text = f"@{username} | ID: {user_id} | {user_data.get('balance', 0):.2f} ₽"
+        builder.add(types.InlineKeyboardButton(text=button_text, callback_data=f"admin_user_{user_id}"))
+    
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_back_main"))
+    builder.adjust(1)
+    
+    try:
+        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    except TelegramBadRequest:
+        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    
+    await callback.answer()
+
 @router.callback_query(F.data == "worker_requisites")
 async def handle_worker_requisites(callback: CallbackQuery):
     """Управление реквизитами (только для админов)"""
@@ -2942,7 +3010,7 @@ async def handle_worker_requisites(callback: CallbackQuery):
     builder = InlineKeyboardBuilder()
     builder.add(types.InlineKeyboardButton(text="✏️ Изменить банковскую карту", callback_data="worker_edit_bank"))
     builder.add(types.InlineKeyboardButton(text="✏️ Изменить крипто-кошелек", callback_data="worker_edit_crypto"))
-    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="worker_back_main"))
+    builder.add(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_back_main"))
     builder.adjust(1)
     
     try:
@@ -2952,15 +3020,15 @@ async def handle_worker_requisites(callback: CallbackQuery):
     
     await callback.answer()
 
-@router.callback_query(F.data == "worker_edit_bank")
-async def handle_worker_edit_bank(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+@router.callback_query(F.data == "admin_edit_bank")
+async def handle_admin_edit_bank(callback: CallbackQuery):
+    admin_id = callback.from_user.id
     
-    if worker_id not in authorized_workers:
+    if admin_id not in authorized_admins:
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
-    worker_states[worker_id] = {
+    worker_states[admin_id] = {
         'action': 'edit_bank_requisites'
     }
     
@@ -2977,7 +3045,7 @@ async def handle_worker_edit_bank(callback: CallbackQuery):
     )
     
     builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="❌ Отмена", callback_data="worker_requisites"))
+    builder.add(types.InlineKeyboardButton(text="❌ Отмена", callback_data="admin_requisites"))
     builder.adjust(1)
     
     try:
@@ -2987,15 +3055,15 @@ async def handle_worker_edit_bank(callback: CallbackQuery):
     
     await callback.answer()
 
-@router.callback_query(F.data == "worker_edit_crypto")
-async def handle_worker_edit_crypto(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+@router.callback_query(F.data == "admin_edit_crypto")
+async def handle_admin_edit_crypto(callback: CallbackQuery):
+    admin_id = callback.from_user.id
     
-    if worker_id not in authorized_workers:
+    if admin_id not in authorized_admins:
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
-    worker_states[worker_id] = {
+    worker_states[admin_id] = {
         'action': 'edit_crypto_requisites'
     }
     
@@ -3010,7 +3078,7 @@ async def handle_worker_edit_crypto(callback: CallbackQuery):
     )
     
     builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="❌ Отмена", callback_data="worker_requisites"))
+    builder.add(types.InlineKeyboardButton(text="❌ Отмена", callback_data="admin_requisites"))
     builder.adjust(1)
     
     try:
@@ -3020,24 +3088,23 @@ async def handle_worker_edit_crypto(callback: CallbackQuery):
     
     await callback.answer()
 
-@router.callback_query(F.data == "worker_broadcast")
-async def handle_worker_broadcast(callback: CallbackQuery):
-    """Рассылка сообщений (только для админов)"""
-    user_id = callback.from_user.id
+@router.callback_query(F.data == "admin_broadcast")
+async def handle_admin_broadcast(callback: CallbackQuery):
+    """Рассылка всем пользователям (только для админов)"""
+    admin_id = callback.from_user.id
     
-    # Проверяем, что пользователь - администратор
-    if user_id not in authorized_admins:
-        await callback.answer("❌ Доступ запрещен. Только для администраторов.", show_alert=True)
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
-    worker_states[user_id] = {
+    worker_states[admin_id] = {
         'action': 'broadcast'
     }
     
     text = "📢 <b>Рассылка сообщения</b>\n\nВведите текст сообщения для отправки всем пользователям:"
     
     builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="❌ Отмена", callback_data="worker_back_main"))
+    builder.add(types.InlineKeyboardButton(text="❌ Отмена", callback_data="admin_back_main"))
     builder.adjust(1)
     
     try:
@@ -3047,34 +3114,61 @@ async def handle_worker_broadcast(callback: CallbackQuery):
     
     await callback.answer()
 
-@router.callback_query(F.data == "worker_back_main")
-async def handle_worker_back_main(callback: CallbackQuery):
-    worker_id = callback.from_user.id
+@router.callback_query(F.data == "admin_requisites")
+async def handle_admin_requisites(callback: CallbackQuery):
+    """Управление реквизитами (только для админов)"""
+    admin_id = callback.from_user.id
     
-    if worker_id not in authorized_workers:
+    if admin_id not in authorized_admins:
         await callback.answer("❌ Доступ запрещен", show_alert=True)
         return
     
-    if worker_id in worker_states:
-        del worker_states[worker_id]
+    # Перенаправляем на существующий обработчик
+    callback.data = "worker_requisites"
+    await handle_worker_requisites(callback)
+
+@router.callback_query(F.data == "admin_update_prices")
+async def handle_admin_update_prices(callback: CallbackQuery):
+    """Обновление цен активов (только для админов)"""
+    admin_id = callback.from_user.id
+    
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
+    
+    worker_states[admin_id] = {'action': 'update_asset_prices'}
     
     text = (
-        "🔧 <b>Панель воркера</b>\n\n"
-        "Добро пожаловать в панель управления!\n"
-        "Выберите действие:"
+        "💹 <b>Обновление цен активов</b>\n\n"
+        "Отправьте JSON в следующем формате:\n\n"
+        "<code>{\n"
+        '    "# Криптовалюты (в рублях)": {\n'
+        '        "₿ Bitcoin (BTC)": 8988312.00,\n'
+        '        "Ξ Ethereum (ETH)": 318839.00\n'
+        "    },\n"
+        '    "# Российские акции (в рублях)": {\n'
+        '        "🛢️ Газпром (GAZP)": 137.54\n'
+        "    },\n"
+        '    "# Сырьевые товары (в рублях)": {\n'
+        '        "🥇 Золото (GOLD)": 10787.00\n'
+        "    }\n"
+        "}</code>\n\n"
+        "❗ Все цены должны быть указаны в рублях"
     )
     
-    builder = InlineKeyboardBuilder()
-    builder.add(types.InlineKeyboardButton(text="👥 Мои маммонты", callback_data="worker_mammonts"))
-    builder.add(types.InlineKeyboardButton(text="💳 Реквизиты", callback_data="worker_requisites"))
-    builder.add(types.InlineKeyboardButton(text="📢 Рассылка", callback_data="worker_broadcast"))
-    builder.adjust(1)
+    await callback.message.answer(text, parse_mode=ParseMode.HTML)
+    await callback.answer()
+
+@router.callback_query(F.data == "admin_back_main")
+async def handle_admin_back_main(callback: CallbackQuery):
+    """Возврат в главное меню админа"""
+    admin_id = callback.from_user.id
     
-    try:
-        await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
-    except TelegramBadRequest:
-        await callback.message.answer(text, reply_markup=builder.as_markup(), parse_mode=ParseMode.HTML)
+    if admin_id not in authorized_admins:
+        await callback.answer("❌ Доступ запрещен", show_alert=True)
+        return
     
+    await show_admin_panel(callback.message)
     await callback.answer()
 
 # ==================== УВЕДОМЛЕНИЯ О ПОПОЛНЕНИИ ====================
