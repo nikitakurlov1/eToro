@@ -1,3 +1,6 @@
+# Environment variables
+.env
+
 # Python
 __pycache__/
 *.py[cod]
@@ -10,6 +13,7 @@ dist/
 downloads/
 eggs/
 .eggs/
+lib/
 lib64/
 parts/
 sdist/
@@ -19,41 +23,31 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# Virtual environments
 venv/
-env/
 ENV/
-
-# Environment variables
-.env
-
-# Database
-*.db
-*.sqlite3
-
-# Logs
-logs/
-*.log
+env/
 
 # IDE
-.idea/
 .vscode/
+.idea/
 *.swp
 *.swo
+*~
 
-# Local configuration
-config.py
+# Data files (если не хотите коммитить данные пользователей)
+users_data.json
+trade_history.json
+worker_config.json
+requisites.json
+promocodes.json
+allowed_cards.json
+pending_deposits.json
+asset_prices.json
 
-# Sensitive data
-*.pem
-*.key
-*.crt
+# Logs
+*.log
 
-# OS generated files
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
